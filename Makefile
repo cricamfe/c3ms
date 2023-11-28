@@ -1,4 +1,4 @@
-# Copyright (c) 2009, 2010 Basilio B. Fraguela. Universidade da Coruña
+# Copyright (c) 2009, 2010 Basilio B. Fraguela. Universidade da CoruÃ±a
 
 INCL := .
 CC  := gcc
@@ -12,19 +12,17 @@ ifdef PRODUCTION
   #-fomit-frame-pointer makes exceptions not work properly for some compilers
   CPPFLAGS := -I$(INCL) -O3 -DNDEBUG
 else
-  CFLAGS := -I$(INCL) -g -DDEBUG
-  CPPFLAGS := -I$(INCL) -g -DDEBUG
+  CFLAGS := -I$(INCL) -g
+  CPPFLAGS := -I$(INCL) -g
 endif
-
 
 all :  $(outputbinaries)
 
 c3ms : $(objs)
 	$(CXX) $(CPPFLAGS) -o $@ $^
 
-%.tab.cpp: %.y %.l
-	bison  -d -o $@ $<
-	-@mv $(@D)/`basename $@ .cpp`.hpp $@.h
+%.tab.cpp: %.y
+	bison -d -o $@ $<
 
 %lex.cpp:  %.l %.tab.cpp
 	flex -Cemr -o$@ $<
