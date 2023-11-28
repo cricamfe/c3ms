@@ -30,3 +30,7 @@
 *.exe
 *.out
 *.app
+
+# Specific files
+*.tab.hpp
+c3ms
