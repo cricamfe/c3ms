@@ -10,7 +10,7 @@
 #include <stack>
 
 #include "CodeStatisticsGatherer.h"
-#include "c3ms.tab.cpp.h"
+#include "c3ms.tab.hpp"
 
   
   extern YYSTYPE yylval;
@@ -33,10 +33,10 @@
 
 %option noyywrap
 
-D			[0-9]
-L			[a-zA-Z_]
-H			[a-fA-F0-9]
-E			[Ee][+-]?{D}+
+D			  [0-9]
+L			  [a-zA-Z_]
+H			  [a-fA-F0-9]
+E			  [Ee][+-]?{D}+
 FS			(f|F|l|L)
 IS			(u|U|l|L)*
 
@@ -149,6 +149,58 @@ typeid      { stat.keyword(yytext); }
 typename    { stat.keyword(yytext); }
 using       { stat.keyword(yytext); }
 asm         { printf("asm is unsupported\n"); }
+
+  /***************** C++14, C++17, C++20 - specific ***************/
+alignas     { stat.keyword(yytext); }
+alignof     { stat.keyword(yytext); }
+constexpr   { stat.keyword(yytext); }
+decltype    { stat.keyword(yytext); }
+noexcept    { stat.keyword(yytext); }
+nullptr     { stat.constant(yytext); }
+static_assert { stat.keyword(yytext); }
+thread_local { stat.keyword(yytext); }
+"if"[\t ]+"constexpr" { stat.keyword(yytext); stat.cond(); stat.decOp(); }
+concept      { stat.keyword(yytext); }
+co_await     { stat.keyword(yytext); }
+co_return    { stat.keyword(yytext); }
+co_yield     { stat.keyword(yytext); }
+requires     { stat.keyword(yytext); }
+
+  /***************** SYCL - specific ***************/
+cl::sycl     { stat.keyword(yytext); }
+sycl         { stat.keyword(yytext); }
+queue        { stat.type(yytext); }
+buffer       { stat.type(yytext); }
+accessor     { stat.type(yytext); }
+range        { stat.type(yytext); }
+nd_range     { stat.type(yytext); }
+kernel       { stat.type(yytext); }
+event        { stat.type(yytext); }
+single_task  { stat.keyword(yytext); stat.decOp(); }
+device       { stat.type(yytext); }
+platform     { stat.type(yytext); }
+context      { stat.type(yytext); }
+
+  /***************** AVX - specific ***************/
+__m256       { stat.type(yytext); }
+__m256d      { stat.type(yytext); }
+__m256i      { stat.type(yytext); }
+_mm256_      { stat.keyword(yytext); }
+_mm256_add_   { stat.keyword(yytext); }
+_mm256_sub_   { stat.keyword(yytext); }
+_mm256_mul_   { stat.keyword(yytext); }
+_mm256_div_   { stat.keyword(yytext); }
+_mm256_and_   { stat.keyword(yytext); }
+_mm256_load_  { stat.keyword(yytext); }
+_mm256_store_ { stat.keyword(yytext); }
+
+  /***************** SIMD - specific ***************/
+simd_t       { stat.type(yytext); }
+simd_i       { stat.type(yytext); }
+simd_f       { stat.type(yytext); }
+stdx::where   { stat.keyword(yytext); stat.decOp(); }
+stdx::reduce  { stat.keyword(yytext); stat.decOp(); }
+element_aligned { stat.keyword(yytext); }
     
 {L}({L}|{D})*	{ stat.identifier(yytext); }
 
