@@ -2,161 +2,160 @@
 
 #include <cmath>
 #include <cstdlib>
-#include <cstdio>
 #include <iostream>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <errno.h>
-
+#include <filesystem>
+#include <vector>
+#include <string>
+#include <algorithm>
+#include <numeric>
+#include <iterator>
 #include "CodeStatistics.h"
 
-extern const CodeStatistics& readFile(const char *fname);
+struct HalsteadMetrics {
+  	double effort;
+  	double volume;
+  	double difficulty;
+  	double timeRequired;
+  	double numberOfBugs;
+};
+
+extern const CodeStatistics& readFile(const char* fname);
 
 namespace {
+	const char RCSId[] = "$Date$ $Revision$";
+	const char ExecutableType[] = 
+	#ifdef NDEBUG
+	"Production";
+	#else
+	"Development";
+	#endif
+  
+	int verbosity = 0;
+	bool displayGlobalData = false;
 
-  const char RCSId[] = "$Date$ $Revision$";
-  const char ExecutableType[] = 
-#ifdef NDEBUG
-  "Production";
-#else
-  "Development";
-#endif
-  
-  int verbosity = 0;
-  bool displayGlobalData = false;
-  
-  void usage()
-  {
-    printf("C++ Code Complexity Measurement System %s (%s)\n", RCSId, ExecutableType);
-    printf("Copyright (c) 2009-10 Basilio B. Fraguela. Universidade da Coruna\n");
-    puts("c3ms [-g] [-v level] <files>");
-    puts("-g            display global data");
-    puts("-v level      verbosity level");
-    exit(EXIT_FAILURE);
-  }
+	void usage()
+	{
+		std::cout << "C++ Code Complexity Measurement System " << RCSId << " (" << ExecutableType << ")\n";
+		std::cout << "Copyright (c) 2009-10 Basilio B. Fraguela. Universidade da Coruna\n";
+		std::cout << "c3ms [-g] [-v level] <files>\n";
+		std::cout << "-g            display global data\n";
+		std::cout << "-v level      verbosity level\n";
+		std::exit(EXIT_FAILURE);
+	}
 
-  void reportStatistics(const CodeStatistics& cs) {
-    printf("  Types      : %7u (%7u unique)\n", cs.getTypes(),       cs.getUniqueTypes());
-    printf("  Constants  : %7u (%7u unique)\n", cs.getConstants(),   cs.getUniqueConstants());
-    printf("  Identifiers: %7u (%7u unique)\n", cs.getIdentifiers(), cs.getUniqueIdentifiers());
-    printf("  Cspecs     : %7u (%7u unique)\n", cs.getCspecs(),      cs.getUniqueCspecs());
-    printf("  Keywords   : %7u (%7u unique)\n", cs.getKeywords(),    cs.getUniqueKeywords());
-    printf("  Operators  : %7u (%7u unique)\n", cs.getOps(),         cs.getUniqueOps());
-    //printf("Conditions : %d\n", cs.getConds());
-  }
+	void reportStatistics(const CodeStatistics& cs) {
+		std::cout << "  Types      : " << std::setw(7) << cs.getTypes() << " (" << std::setw(7) << cs.getUniqueTypes() << " unique)\n";
+		std::cout << "  Constants  : " << std::setw(7) << cs.getConstants() << " (" << std::setw(7) << cs.getUniqueConstants() << " unique)\n";
+		std::cout << "  Identifiers: " << std::setw(7) << cs.getIdentifiers() << " (" << std::setw(7) << cs.getUniqueIdentifiers() << " unique)\n";
+		std::cout << "  Cspecs     : " << std::setw(7) << cs.getCspecs() << " (" << std::setw(7) << cs.getUniqueCspecs() << " unique)\n";
+		std::cout << "  Keywords   : " << std::setw(7) << cs.getKeywords() << " (" << std::setw(7) << cs.getUniqueKeywords() << " unique)\n";
+		std::cout << "  Operators  : " << std::setw(7) << cs.getOps() << " (" << std::setw(7) << cs.getUniqueOps() << " unique)\n";
+		//printf("Conditions : %d\n", cs.getConds());
+	}
   
-  /// Stores the volume in V
-  double computeHalsteadEffort(const CodeStatistics& cs, double& V, bool verbose) {
-    unsigned int n1 = cs.getUniqueOperators();
-    unsigned int n2 = cs.getUniqueOperands();
-    
-    unsigned int N1 = cs.getOperators();
-    unsigned int N2 = cs.getOperands();
-    
-    unsigned int n = n1 + n2;
-    unsigned int N = N1 + N2;
-    
-    V = N * log2((double)n);
-    
-    double Lhat = (2.0 / n1) * (n2 / (double)N2);
-    
-    double Ehat = V / Lhat;
-  
-    if (verbose) {
-      printf("  n1 (unique operators) = %9u\n", n1);
-      printf("  n2 (unique operands)  = %9u\n", n2);
-      printf("  N1 (total # operatros)= %9u\n", N1);
-      printf("  N2 (total # operands) = %9u\n", N2);
-    }
-    
-    return Ehat;
-    
-  }
-  
-  void config(int argc, char *argv[])
-  { int i;
-    static const char *srchArgs =
-#ifdef __linux__
-    "+v:g"
-#else
-    "v:g"
-#endif
-    ;
-    
-    while ((i = getopt(argc, argv, srchArgs)) != -1)
-      switch(i) {
-	case 'g':
-	  displayGlobalData = true; 
-	  break;
-	case 'v':
-	  verbosity = (unsigned long long int)strtoll(optarg, (char **)NULL, 10);
-	  break;
-	case '?':
-	default:
-	  usage();
-      }
 
-    if(argc <= optind)
-      usage();
-    
-  }
+	HalsteadMetrics computeHalsteadMetrics(const CodeStatistics& cs, bool verbose) {
+		HalsteadMetrics metrics;
+		
+		unsigned int n1 = cs.getUniqueOperators();
+		unsigned int n2 = cs.getUniqueOperands();
+		unsigned int N1 = cs.getOperators();
+		unsigned int N2 = cs.getOperands();
+		unsigned int n = n1 + n2;
+		unsigned int N = N1 + N2;
+
+		metrics.volume = N * log2((double)n);
+		metrics.difficulty = (n1 / 2.0) * (N2 / (double)n2);
+		metrics.effort = metrics.volume * metrics.difficulty;
+		metrics.timeRequired = metrics.effort / 18.0; // Suponiendo que el esfuerzo está en segundos
+		metrics.numberOfBugs = metrics.volume / 3000.0;
+
+		// if (verbose) {
+		// 	std::cout << "  n1 (unique operators) = " << std::setw(9) << n1 << '\n';
+		// 	std::cout << "  n2 (unique operands)  = " << std::setw(9) << n2 << '\n';
+		// 	std::cout << "  N1 (total # operators)= " << std::setw(9) << N1 << '\n';
+		// 	std::cout << "  N2 (total # operands) = " << std::setw(9) << N2 << '\n';
+		// }
+
+		return metrics;
+	}
+  
+	std::vector<std::filesystem::path> config(int argc, char* argv[]) {
+		std::vector<std::filesystem::path> filepaths;
+
+		for (int i = 1; i < argc; ++i) {
+			std::string arg = argv[i];
+			if (arg == "-g") {
+				displayGlobalData = true;
+			} else if (arg == "-v" && i + 1 < argc) {
+				verbosity = std::stoi(argv[++i]);
+			} else {
+				filepaths.emplace_back(argv[i]);
+			}
+		}
+
+		if (filepaths.empty()) {
+			usage();
+		}
+
+		return filepaths;
+	}
   
 } //end private namespace
 
 /////////////////////////////////////////////////////////////////////
-int main(int argc, char *argv[])
-{ CodeStatistics cs;
-  struct stat fileStat;
-  double globalEhat = 0.0, globalVolume = 0.0;
-  CodeStatistics::StatSize totConds = 0;
+int main(int argc, char *argv[]) {
+	CodeStatistics cs;
+	double globalEhat = 0.0, globalVolume = 0.0, globalDifficulty = 0.0, globalTimeRequired = 0.0, globalNumberOfBugs = 0.0;
+	CodeStatistics::StatSize totConds = 0;
 
-  config(argc, argv);
+	// Llamada a config actualizada
+	auto filepaths = config(argc, argv);
 
-  for(int nfile = optind; nfile < argc; ++nfile) {
-    double localVolume;
-    
-    if (lstat(argv[nfile], &fileStat) != 0) {
-      printf("Error accessing %s errno=%d\n", argv[nfile], errno);
-      exit(EXIT_FAILURE);
-    }
+	for (const auto& filePath : filepaths) {
+		double localVolume;
 
-    if( !S_ISREG(fileStat.st_mode) ) {
-      printf("%s is not a regular file: disregarded\n", argv[nfile]);
-      continue;
-    }
+		if (!std::filesystem::exists(filePath) || !std::filesystem::is_regular_file(filePath)) {
+			std::cerr << "Error accessing or invalid file: " << filePath << '\n';
+			continue;
+		}
 
-    const CodeStatistics& csfile = readFile(argv[nfile]);
-    double localEhat = computeHalsteadEffort(csfile, localVolume, verbosity > 2);
-    totConds += csfile.getConds();
+		const std::string filePathStr = filePath.string();
+		const CodeStatistics& csfile = readFile(filePathStr.c_str());
+        HalsteadMetrics metrics = computeHalsteadMetrics(csfile, verbosity > 2);
+		totConds += csfile.getConds();
 
-    if(verbosity != 0) {
-      printf("%25s: %10.2lf  (Vol %10.2lf) (%5d conds)\n", argv[nfile], localEhat, localVolume, csfile.getConds());
-      if(verbosity > 1)
-	reportStatistics(csfile);
-    }
-    
-    if(displayGlobalData)
-      cs += csfile;
-    
-    globalEhat   += localEhat;
-    globalVolume += localVolume;
-  }
-  
-  if(verbosity)
-    printf("\n");
-  printf("       Total Effort: %10.2lf (Vol %10.2lf) (%5d conds)\n", globalEhat, globalVolume, totConds);
+		// Extract filename from path, and print it
+		std::string filename = filePath.filename().string();
+		if (verbosity != 0) {
+			printf("%s: %10.2lf  (Vol %10.2lf) (%5d conds) (%3.2lf difficulty) (%5.2lf seconds) (%1.2lf bugs)\n", filename.c_str(), metrics.effort, metrics.volume, csfile.getConds(), metrics.difficulty, metrics.timeRequired, metrics.numberOfBugs);
+			if (verbosity > 1) {
+				reportStatistics(csfile);
+			}
+		}
 
-  if(displayGlobalData) {
+		if (displayGlobalData) {
+			cs += csfile;
+		}
 
-    if(verbosity > 1) {
-      puts("------------------  GLOBAL STATISTICS:");
-      reportStatistics(cs);
-    }
-    
-    globalEhat = computeHalsteadEffort(cs, globalVolume, verbosity > 2);
-    printf("Total Global Effort: %10.2lf (Vol %10.2lf) (%5d conds)\n", globalEhat, globalVolume, totConds);
-  }
-  
-  exit(EXIT_SUCCESS);
+		globalEhat += metrics.effort;
+		globalVolume += metrics.volume;
+		globalDifficulty += metrics.difficulty;
+		globalTimeRequired += metrics.timeRequired;
+		globalNumberOfBugs += metrics.numberOfBugs;
+	}
+ 	printf("\n· Total Effort: %10.2lf (Vol %10.2lf) (%3d conds) (%3.2lf difficulty) (%5.2lf seconds) (%1.2lf bugs)\n", globalEhat, globalVolume, totConds, globalDifficulty, globalTimeRequired, globalNumberOfBugs);
+
+	// Total Global (si displayGlobalData es true)
+	if (displayGlobalData) {
+		if (verbosity > 1) {
+			puts("\n· GLOBAL STATISTICS:");
+			reportStatistics(cs);
+		}
+
+		HalsteadMetrics globalMetrics = computeHalsteadMetrics(cs, verbosity > 2);
+		printf("Total Global Effort: %10.2lf (Vol %10.2lf) (%3d conds) (%3.2lf difficulty) (%5.2lf seconds) (%1.2lf bugs)\n", globalMetrics.effort, globalMetrics.volume, totConds, globalMetrics.difficulty, globalMetrics.timeRequired, globalMetrics.numberOfBugs);
+	}
+
+	return EXIT_SUCCESS;
 }
