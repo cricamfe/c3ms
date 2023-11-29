@@ -11,178 +11,178 @@
 #include <iterator>
 #include <fstream>
 #include "CodeStatistics.h"
-
-struct HalsteadMetrics {
-	unsigned int n1;
-	unsigned int n2;
-	unsigned int N1;
-	unsigned int N2;
-	unsigned int n;
-	unsigned int N;
-
-  	double effort;
-  	double volume;
-  	double difficulty;
-  	double timeRequired;
-  	double numberOfBugs;
-	int conditions;
-	int cyclomaticComplexity;
-};
-
-void reportHalsteadMetrics(const HalsteadMetrics& metrics) {
-	std::cout << "  n1 (unique operators) = " << std::setw(9) << metrics.n1 << '\n';
-	std::cout << "  n2 (unique operands)  = " << std::setw(9) << metrics.n2 << '\n';
-	std::cout << "  N1 (total # operators)= " << std::setw(9) << metrics.N1 << '\n';
-	std::cout << "  N2 (total # operands) = " << std::setw(9) << metrics.N2 << '\n';
+// Simplified metric reporting
+template<typename T>
+void reportMetric(const char* name, const T& value) {
+    std::cout << "  " << name << " : " << std::setw(9) << value << '\n';
 }
 
-struct MaintainabilityIndexMetrics {
+class MetricsCalculator {
+private:
+	// Halstead Metrics
+    unsigned int n1, n2, N1, N2, n, N;
+    double volume, difficulty, effort, timeRequired, numberOfBugs;
+    int conditions;
+	// Maintainability Index
     double maintainabilityIndex;
+	// Cyclomatic Complexity
+    int cyclomaticComplexity;
+	// Lines of Code
+	int linesOfCode;
+
+    // template<typename T>
+    // std::string formatMetric(const char* name, const T& value) const {
+    //     std::ostringstream ss;
+    //     ss << std::left << "  " << std::setw(30) << name << " : " << std::right << std::setw(10) << value << '\n';
+    //     return ss.str();
+    // }
+
+    std::string reportStat(const char* name, int total, int unique) const {
+        std::ostringstream ss;
+        ss << std::left << "  " << std::setw(30) << name << " : " << std::right << std::setw(10) << total 
+           << " (" << unique << " unique)\n";
+        return ss.str();
+    }
+
+public:
+    MetricsCalculator(const CodeStatistics& cs, const int lc) {
+        n1 = cs.getUniqueOperators();
+        n2 = cs.getUniqueOperands();
+        N1 = cs.getOperators();
+        N2 = cs.getOperands();
+        n = n1 + n2;
+        N = N1 + N2;
+        conditions = cs.getConds();
+		linesOfCode = lc;
+        calculateMetrics();
+    }
+
+    void calculateMetrics() {
+        volume = N * log2(n);
+        difficulty = (n1 / 2.0) * (N2 / static_cast<double>(n2));
+        effort = volume * difficulty;
+        timeRequired = effort / 18.0;
+        numberOfBugs = pow(effort, 2.0 / 3.0) / 3000.0;
+        cyclomaticComplexity = conditions + 1;
+        maintainabilityIndex = 171 - 5.2 * log(volume) - 0.23 * cyclomaticComplexity - 16.2 * log(linesOfCode);
+
+    }
+
+    void report(int verbosity, const std::string& filePath, const int linesOfCode, const CodeStatistics& cs) const {
+        std::ostringstream reportStream;
+
+        if (verbosity > 0) {
+            reportStream << filePath << ": (Effort: " << std::fixed << std::setprecision(2) << effort
+                         << ") (Volume: " << volume << ") (Conditions: " << conditions
+                         << ") (Cyclomatic Complexity: " << cyclomaticComplexity
+                         << ") (Difficulty: " << difficulty << ") (Time Required: " << timeRequired
+                         << ") (Bugs: " << numberOfBugs << ") (Maintainability: " << maintainabilityIndex << ")\n";
+        }
+
+        if (verbosity > 2) {
+			auto formatMetric = [&](const char* name, const auto& value) {
+				std::ostringstream ss;
+				ss << std::left << "  " << std::setw(25) << name << " : " << std::right << std::setw(7) << value << '\n';
+				return ss.str();
+			};
+            reportStream << formatMetric("n1 (unique operators)", n1)
+                         << formatMetric("n2 (unique operands)", n2)
+                         << formatMetric("N1 (total # operators)", N1)
+                         << formatMetric("N2 (total # operands)", N2);
+        }
+
+        if (verbosity > 1) {
+			auto reportStat = [&](const char* name, int total, int unique) {
+				std::ostringstream ss;
+				ss << std::left << "  " << std::setw(25) << name << " : " << std::right << std::setw(7) << total 
+				   << " (" << unique << " unique)\n";
+				return ss.str();
+			};
+            reportStream << reportStat("Types", cs.getTypes(), cs.getUniqueTypes())
+                         << reportStat("Constants", cs.getConstants(), cs.getUniqueConstants())
+                         << reportStat("Identifiers", cs.getIdentifiers(), cs.getUniqueIdentifiers())
+                         << reportStat("Cspecs", cs.getCspecs(), cs.getUniqueCspecs())
+                         << reportStat("Keywords", cs.getKeywords(), cs.getUniqueKeywords())
+                         << reportStat("Operators", cs.getOps(), cs.getUniqueOps());
+        }
+
+        std::cout << reportStream.str();
+    }
+
+    // Accessor methods for global calculation
+    double getVolume() const { return volume; }
+    int getCyclomaticComplexity() const { return cyclomaticComplexity; }
+    int getLinesOfCode() const { return N; }
 };
 
-// Función para generar un separador personalizado
-std::string generateSeparator(char character, int length) {
-    return std::string(length, character);
-}
-
-
+// Separador de líneas
+const std::string SEPARATOR = std::string(20, '-');
 
 extern const CodeStatistics& readFile(const char* fname);
 
-namespace {
-	const char RCSId[] = "$Date$ $Revision$";
-	const char ExecutableType[] = 
-	#ifdef NDEBUG
-	"Production";
-	#else
-	"Development";
-	#endif
-  
-	int verbosity = 0;
+std::vector<std::filesystem::path> parseArguments(int argc, char* argv[], int& verbosity) {
+    std::vector<std::filesystem::path> filepaths;
+    for (int i = 1; i < argc; ++i) {
+        std::string arg = argv[i];
+        if (arg == "-v" && i + 1 < argc) {
+            verbosity = std::stoi(argv[++i]);
+        } else {
+            filepaths.emplace_back(argv[i]);
+        }
+    }
+    return filepaths;
+}
 
-	void usage()
-	{
-		std::cout << "C++ Code Complexity Measurement System " << RCSId << " (" << ExecutableType << ")\n";
-		std::cout << "Copyright (c) 2009-10 Basilio B. Fraguela. Universidade da Coruña\n";
-		std::cout << "Updated by: " << __DATE__ << '\n';
-		std::cout << "c3ms [-v level] <files>\n";
-		std::cout << "-v level      verbosity level\n";
-		std::exit(EXIT_FAILURE);
+int countLinesOfCode(const std::string& filePath) {
+	std::ifstream file(filePath);
+	if (!file) {
+		std::cerr << "Error trying to open file: " << filePath << std::endl;
+		return -1;
 	}
+	return std::count(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>(), '\n');
+}
 
-	void reportStatistics(const CodeStatistics& cs) {
-		std::cout << "  Types      : " << std::setw(7) << cs.getTypes() << " (" << std::setw(7) << cs.getUniqueTypes() << " unique)\n";
-		std::cout << "  Constants  : " << std::setw(7) << cs.getConstants() << " (" << std::setw(7) << cs.getUniqueConstants() << " unique)\n";
-		std::cout << "  Identifiers: " << std::setw(7) << cs.getIdentifiers() << " (" << std::setw(7) << cs.getUniqueIdentifiers() << " unique)\n";
-		std::cout << "  Cspecs     : " << std::setw(7) << cs.getCspecs() << " (" << std::setw(7) << cs.getUniqueCspecs() << " unique)\n";
-		std::cout << "  Keywords   : " << std::setw(7) << cs.getKeywords() << " (" << std::setw(7) << cs.getUniqueKeywords() << " unique)\n";
-		std::cout << "  Operators  : " << std::setw(7) << cs.getOps() << " (" << std::setw(7) << cs.getUniqueOps() << " unique)\n";
-		//printf("Conditions : %d\n", cs.getConds());
-	}
+void usage() {
+    std::cout << "C++ Code Complexity Measurement System\n"
+              << "Usage: c3ms [-v level] <files>\n"
+              << "-v level      Set verbosity level\n";
+    std::exit(EXIT_FAILURE);
+}
 
-	int countLinesOfCode(const std::string& filePath) {
-		int lines = 0;
-		std::string line;
-		std::ifstream file(filePath);
-		while (std::getline(file, line)) {
-			lines++;
-		}
-		return lines;
-	}
+int main(int argc, char* argv[]) {
+    int verbosity = 0;
+    auto filepaths = parseArguments(argc, argv, verbosity);
 
-	double calculateMaintainabilityIndex(double volume, int cyclomaticComplexity, int linesOfCode) {
-		return 171 - 5.2 * log(volume) - 0.23 * cyclomaticComplexity - 16.2 * log(linesOfCode);
-	}
+    if (filepaths.empty()) {
+        usage();
+    }
 
-	HalsteadMetrics computeHalsteadMetrics(const CodeStatistics& cs, bool verbose) {
-		HalsteadMetrics metrics;
-		
-		metrics.n1 = cs.getUniqueOperators();
-		metrics.n2 = cs.getUniqueOperands();
-		metrics.N1 = cs.getOperators();
-		metrics.N2 = cs.getOperands();
-		metrics.n = metrics.n1 + metrics.n2;
-		metrics.N = metrics.N1 + metrics.N2;
-
-		metrics.volume = metrics.N * log2((double)metrics.n);
-		metrics.difficulty = (metrics.n1 / 2.0) * (metrics.N2 / (double)metrics.n2);
-		metrics.effort = metrics.volume * metrics.difficulty;
-		metrics.timeRequired = metrics.effort / 18.0;
-		metrics.numberOfBugs = pow(metrics.effort, 2.0 / 3.0) / 3000.0;
-		metrics.conditions = cs.getConds();
-		metrics.cyclomaticComplexity = metrics.conditions + 1;
-
-		return metrics;
-	}
-  
-	std::vector<std::filesystem::path> config(int argc, char* argv[]) {
-		std::vector<std::filesystem::path> filepaths;
-
-		for (int i = 1; i < argc; ++i) {
-			std::string arg = argv[i];
-			if (arg == "-v" && i + 1 < argc) {
-				verbosity = std::stoi(argv[++i]);
-			} else {
-				filepaths.emplace_back(argv[i]);
-			}
-		}
-
-		if (filepaths.empty()) {
-			usage();
-		}
-
-		return filepaths;
-	}
-  
-} //end private namespace
-
-/////////////////////////////////////////////////////////////////////
-int main(int argc, char *argv[]) {
-    // Inicialización de variables globales
-	CodeStatistics cs;
-    int globalTotalLinesOfCode = 0;
-
-    auto filepaths = config(argc, argv);
+    CodeStatistics globalCs;
+    double globalVolume = 0;
+    int globalCyclomaticComplexity = 0, globalLinesOfCode = 0;
 
     for (const auto& filePath : filepaths) {
         if (!std::filesystem::exists(filePath) || !std::filesystem::is_regular_file(filePath)) {
-            std::cerr << "Error accessing or invalid file: " << filePath << '\n';
+            std::cerr << "Error: " << filePath << " not accessible or invalid\n";
             continue;
         }
 
-        const std::string filePathStr = filePath.string();
-        const CodeStatistics& csfile = readFile(filePathStr.c_str());
-        HalsteadMetrics metrics = computeHalsteadMetrics(csfile, verbosity > 2);
-        int linesOfCode = countLinesOfCode(filePathStr);
+        const CodeStatistics& cs = readFile(filePath.string().c_str());
+        int linesOfCode = countLinesOfCode(filePath.string());
+		MetricsCalculator metrics(cs, linesOfCode);
+        metrics.report(verbosity, filePath.filename().string(), linesOfCode, cs);
 
-        // Reporte individual por archivo
-        if (verbosity != 0) {
-            double maintainabilityIndex = calculateMaintainabilityIndex(metrics.volume, metrics.cyclomaticComplexity, linesOfCode);
-            printf("%s: (Effort: %10.2lf) (Volume: %10.2lf) (Conditions: %3d) (Cyclomatic Complexity: %3d) (Difficulty: %3.2lf) (Time Required: %5.2lf) (Delivered Bugs: %1.2lf) (Maintainability Index: %3.2lf)\n",
-                filePath.filename().string().c_str(), metrics.effort, metrics.volume, metrics.conditions, metrics.cyclomaticComplexity, metrics.difficulty, metrics.timeRequired, metrics.numberOfBugs, maintainabilityIndex
-            );
-			if (verbosity > 2) { reportHalsteadMetrics(metrics); }
-            if (verbosity > 1) { reportStatistics(csfile); }
-        }
-		// Suma de métricas individuales
-		cs += csfile;
-		globalTotalLinesOfCode += linesOfCode;
+        globalCs += cs;
+        globalVolume += metrics.getVolume();
+        globalCyclomaticComplexity += metrics.getCyclomaticComplexity();
+        globalLinesOfCode += linesOfCode;
     }
 
-    // Cálculo global de métricas
-	HalsteadMetrics globalMetrics = computeHalsteadMetrics(cs, verbosity > 2);
-	double globalMaintainabilityIndex = calculateMaintainabilityIndex(globalMetrics.volume, globalMetrics.cyclomaticComplexity, globalTotalLinesOfCode);
-	if (verbosity != 0) {
-		printf("\nGLOBAL STATISTICS\n");
-		printf("%s\n", generateSeparator('-', 20).c_str());  // Línea de separador
-		printf("Total Lines of Code: %d\n", globalTotalLinesOfCode);
-	}
-	printf("Global metrics: (Effort: %10.2lf) (Volume: %10.2lf) (Conditions: %2d) (Cyclomatic Complexity: %2d) (Difficulty: %3.2lf) (Time Required: %5.2lf) (Delivered Bugs: %1.2lf) (Global Maintainability Index: %3.2lf)\n",
-		globalMetrics.effort, globalMetrics.volume, globalMetrics.conditions, globalMetrics.cyclomaticComplexity, globalMetrics.difficulty, globalMetrics.timeRequired, globalMetrics.numberOfBugs, globalMaintainabilityIndex
-	);
-
-	if (verbosity > 2) { reportHalsteadMetrics(globalMetrics); }
-	if (verbosity > 1) { reportStatistics(cs); }
+    MetricsCalculator globalMetrics(globalCs, globalLinesOfCode);
+    if (verbosity > 0) {
+        std::cout << "\nGLOBAL STATISTICS\n";
+        globalMetrics.report(verbosity, "Global", globalLinesOfCode, globalCs);
+    }
 
     return EXIT_SUCCESS;
 }
