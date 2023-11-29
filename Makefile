@@ -1,40 +1,66 @@
 # Copyright (c) 2009, 2010 Basilio B. Fraguela. Universidade da Coruña
+# Upgrade (2023) by Campos-Ferrer, Cristian. Universidad de Málaga
 
-INCL := .
+INCL := include
+SRC := src
+OBJ := obj
+BIN := bin
+DEBUG_DIR := debug
+RELEASE_DIR := release
+
 CC  := gcc
 CXX := g++
 
-objs           := c3ms.o c3mslex.o c3ms.tab.o
-outputbinaries := c3ms
-
-ifdef PRODUCTION
-  CFLAGS := -I$(INCL) -O3 -DNDEBUG -fomit-frame-pointer
-  #-fomit-frame-pointer makes exceptions not work properly for some compilers
-  CPPFLAGS := -I$(INCL) -O3 -DNDEBUG
+# Determinar modo de compilación y configurar las carpetas correspondientes
+ifdef DEBUG
+  BUILD_DIR := $(DEBUG_DIR)
+  CFLAGS := -I$(INCL) -g -DDEBUG
+  CPPFLAGS := -I$(INCL) -g -DDEBUG
 else
-  CFLAGS := -I$(INCL) -g
-  CPPFLAGS := -I$(INCL) -g
+  BUILD_DIR := $(RELEASE_DIR)
+  CFLAGS := -I$(INCL) -O3
+  CPPFLAGS := -I$(INCL) -O3
 endif
 
-all :  $(outputbinaries)
+# Definir archivos fuente y objetos
+SRCS := $(wildcard $(SRC)/*.cpp) $(wildcard *.cpp) $(INCL)/c3ms.tab.cpp $(INCL)/c3mslex.cpp
+OBJS := $(patsubst $(SRC)/%.cpp,$(OBJ)/$(BUILD_DIR)/%.o,$(wildcard $(SRC)/*.cpp)) \
+        $(patsubst %.cpp,$(OBJ)/$(BUILD_DIR)/%.o,$(wildcard *.cpp)) \
+        $(patsubst $(INCL)/%.cpp,$(OBJ)/$(BUILD_DIR)/%.o,$(INCL)/c3ms.tab.cpp $(INCL)/c3mslex.cpp)
 
-c3ms : $(objs)
+# Nombre del ejecutable
+EXECUTABLE := c3ms
+
+# Reglas
+all: setup $(BIN)/$(BUILD_DIR)/$(EXECUTABLE)
+
+setup:
+	@mkdir -p $(OBJ)/$(DEBUG_DIR) $(OBJ)/$(RELEASE_DIR)
+	@mkdir -p $(BIN)/$(DEBUG_DIR) $(BIN)/$(RELEASE_DIR)
+
+$(BIN)/$(BUILD_DIR)/$(EXECUTABLE): $(OBJS)
 	$(CXX) $(CPPFLAGS) -o $@ $^
 
-%.tab.cpp: %.y
-	bison -d -o $@ $<
-
-%lex.cpp:  %.l %.tab.cpp
-	flex -Cemr -o$@ $<
-
-%.o : %.c
-	$(CC) -c $(CFLAGS) $< -o $@
-
-%.o : %.cpp
+$(OBJ)/$(BUILD_DIR)/%.o: $(SRC)/%.cpp
+	@mkdir -p $(@D)
 	$(CXX) -c $(CPPFLAGS) $< -o $@
 
+$(OBJ)/$(BUILD_DIR)/%.o: %.cpp
+	@mkdir -p $(@D)
+	$(CXX) -c $(CPPFLAGS) $< -o $@
+
+$(OBJ)/$(BUILD_DIR)/%.o: $(INCL)/%.cpp
+	@mkdir -p $(@D)
+	$(CXX) -c $(CPPFLAGS) $< -o $@
+
+$(INCL)/c3ms.tab.cpp: $(INCL)/c3ms.y
+	bison -d -o $@ $<
+
+$(INCL)/c3mslex.cpp: $(INCL)/c3ms.l $(INCL)/c3ms.tab.cpp
+	flex -Cemr -o $@ $<
+
 clean:
-	-@rm -f $(objs) c3ms.tab* c3mslex.cpp
+	-@rm -f $(OBJ)/$(DEBUG_DIR)/*.o $(OBJ)/$(RELEASE_DIR)/*.o $(INCL)/c3ms.tab* $(INCL)/c3mslex.cpp
 
 veryclean: clean
-	-@rm -rf $(outputbinaries)
+	-@rm -rf $(BIN)/$(DEBUG_DIR)/$(EXECUTABLE) $(BIN)/$(RELEASE_DIR)/$(EXECUTABLE)

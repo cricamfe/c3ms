@@ -33,4 +33,6 @@
 
 # Specific files
 *.tab.hpp
+*.tab.cpp
+c3mslex.cpp
 c3ms

@@ -1,28 +1,28 @@
-# c3ms: Halstead's Effort Calculator
+# c3ms: Halstead's Effort and Complexity Metrics Calculator
 
 ## Installation
 
 ### Debug/Development Mode
 
 ```shell
-make
+make DEBUG=1
 ```
 
-### Production Mode
+### Release Mode
 
 ```shell
-make PRODUCTION=1
+make
 ```
 
 ### Usage
 
 ```shell
-./c3ms [-g] [-v level] <files>
+./c3ms [-f] [-v level] <files>
 ```
 
 ### Description 
 
-The `c3ms` tool calculates Halstead's programming effort based on the number of tokens in the provided files. Each file is considered an independent module, and the final volume and programming effort are sums of the calculations for each file.
+The `c3ms` tool calculates Halstead's programming effort and various complexity metrics based on the number of tokens in the provided files. Each file is considered an independent module, and metrics are calculated for each file individually as well as aggregated across all files.
 
 #### Criteria for Tokens
 
@@ -33,8 +33,9 @@ Additionally, the tool outputs Halstead's volume and counts the number of condit
 
 ### Options
 
-- `-g`: Computes global effort across all files as a single module. When used with `-v`, it provides detailed global statistics.
-- `-v`: Varies the output detail level.
-  - **Level 1**: Effort, volume, and number of conditions per file.
-  - **Level 2**: Number of tokens and unique tokens of each kind.
-  - **Level 3**: Number of operands and operators
+- `-f`,`--function`: Analyzes the effort for each function in the provided files.
+- `-v [level]`, `--verbosity [level]`: Adjusts the output detail level.
+  - **Level 0**: No additional metrics (default).
+  - **Level 1**: Basic metrics (Effort, Volume, Conditions, Cyclomatic Complexity, Difficulty, Time Required, Bugs, Maintainability).
+  - **Level 2**: Basic metrics and Additional Statistics (Types, Constants, Identifiers, Cspecs, Keywords, Operators).
+  - **Level 3**: All the above metrics plus Detailed Metrics (n1 - unique operators, n2 - unique operands, N1 - total operators, N2 - total operands).
