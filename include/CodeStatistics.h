@@ -41,8 +41,8 @@ public:
     StatSize getOps()         const { return operators; }
     StatSize getConds()       const { return conditions; }
 
-    StatSize getOperands()    const { return types + constants + identifiers; }
-    StatSize getOperators()   const { return cspecs + keywords + operators; }
+    StatSize getOperands()    const { return constants + identifiers; }
+    StatSize getOperators()   const { return cspecs + keywords + operators + types; }
 
     StatSize getUniqueTypes()       const { return typesSet.size(); }
     StatSize getUniqueConstants()   const { return constantsSet.size(); }
@@ -51,8 +51,8 @@ public:
     StatSize getUniqueKeywords()    const { return keywordsSet.size(); }
     StatSize getUniqueOps()         const { return operatorsSet.size(); }
 
-    StatSize getUniqueOperands() const  { return getUniqueTypes() + getUniqueConstants() + getUniqueIdentifiers(); }
-    StatSize getUniqueOperators() const { return getUniqueCspecs() + getUniqueKeywords() + getUniqueOps(); }
+    StatSize getUniqueOperands() const  { return getUniqueConstants() + getUniqueIdentifiers(); }
+    StatSize getUniqueOperators() const { return getUniqueCspecs() + getUniqueKeywords() + getUniqueOps() + getUniqueTypes(); }
 
     CodeStatistics& operator+= (const CodeStatistics& other) {
         types += other.types;
