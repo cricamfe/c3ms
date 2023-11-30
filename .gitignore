@@ -36,3 +36,7 @@
 *.tab.cpp
 c3mslex.cpp
 c3ms
+
+# Folder
+build
+docs

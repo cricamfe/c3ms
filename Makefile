@@ -66,6 +66,10 @@ $(OBJ)/$(BUILD_DIR)/c3mslex.o: $(INCL)/c3mslex.cpp
 $(INCL)/c3mslex.cpp: $(INCL)/c3ms.l $(INCL)/c3ms.tab.cpp
 	flex -Cemr -o $@ $<
 
+# Documentación
+doc:
+	doxygen Doxyfile
+
 # Limpieza
 clean:
 	-@rm -f $(OBJ)/$(DEBUG_DIR)/*.o $(OBJ)/$(RELEASE_DIR)/*.o $(INCL)/c3ms.tab* $(INCL)/c3mslex.cpp
