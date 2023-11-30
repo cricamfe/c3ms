@@ -30,7 +30,7 @@ void MetricsCalculator::calculateMetrics() {
 // Method to report the calculated metrics
 void MetricsCalculator::report(int verbosity, const std::string& filePath, const int linesOfCode, const CodeStatistics& cs) const {
     std::ostringstream reportStream; // Stream to build the report
-    const int nameWidth = 30; // Column width for metric names
+    const int nameWidth = 45; // Column width for metric names
     const int valueWidth = 15; // Column width for metric values
 
     // Lambda to format and return a metric as a string
@@ -52,26 +52,26 @@ void MetricsCalculator::report(int verbosity, const std::string& filePath, const
                     << formatMetric("Conditions", conditions) << formatMetric("Cyclomatic Complexity", cyclomaticComplexity)
                     << formatMetric("Difficulty", difficulty) << formatMetric("Time Required", timeRequired, "seconds")
                     << formatMetric("Bugs", numberOfBugs, "delivered") << formatMetric("Maintainability", maintainabilityIndex)
-                    << std::string(60, '-') << "\n";
+                    << std::string(80, '-') << "\n";
 
     if (verbosity > 2) {
         // Detailed metrics
-        reportStream << "Detailed Metrics:\n" << std::string(60, '-') << "\n"
+        reportStream << "Detailed Metrics:\n" << std::string(80, '-') << "\n"
                      << formatMetric("n1 (unique operators)", n1) << formatMetric("n2 (unique operands)", n2)
                      << formatMetric("N1 (total # operators)", N1) << formatMetric("N2 (total # operands)", N2)
-                     << std::string(60, '-') << "\n";
+                     << std::string(80, '-') << "\n";
     }
 
     if (verbosity > 1) {
         // Additional statistics
-        reportStream << "Additional Statistics:\n" << std::string(60, '-') << "\n";
+        reportStream << "Additional Statistics:\n" << std::string(80, '-') << "\n";
         reportStream << formatMetric("Types", cs.getTypes(), std::to_string(cs.getUniqueTypes()) + " unique")
                      << formatMetric("Constants", cs.getConstants(), std::to_string(cs.getUniqueConstants()) + " unique")
                      << formatMetric("Identifiers", cs.getIdentifiers(), std::to_string(cs.getUniqueIdentifiers()) + " unique")
                      << formatMetric("Cspecs", cs.getCspecs(), std::to_string(cs.getUniqueCspecs()) + " unique")
                      << formatMetric("Keywords", cs.getKeywords(), std::to_string(cs.getUniqueKeywords()) + " unique")
                      << formatMetric("Operators", cs.getOps(), std::to_string(cs.getUniqueOps()) + " unique")
-                     << std::string(60, '-') << "\n";
+                     << std::string(80, '-') << "\n";
     }
 
     // Output the final report
