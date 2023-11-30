@@ -165,11 +165,93 @@ co_await     { stat.keyword(yytext); }
 co_return    { stat.keyword(yytext); }
 co_yield     { stat.keyword(yytext); }
 requires     { stat.keyword(yytext); }
+"std::get"   { stat.op(yytext); }
+"std::tuple" { stat.type(yytext); }
+
+  /***************** oneTBB - specific ***************/
+"parallel_for"         { stat.keyword(yytext); stat.cond(); }
+"parallel_reduce"      { stat.keyword(yytext); stat.cond(); }
+"parallel_scan"        { stat.keyword(yytext); stat.cond(); }
+"parallel_pipeline"    { stat.keyword(yytext); stat.cond(); }
+"flow_graph"           { stat.keyword(yytext); }
+
+"global_control"       { stat.keyword(yytext); }
+"task_group"           { stat.keyword(yytext); }
+"task_arena"           { stat.keyword(yytext); }
+"blocked_range"        { stat.type(yytext); }
+"blocked_range2d"      { stat.type(yytext); }
+"blocked_range3d"      { stat.type(yytext); }
+
+"concurrent_vector"    { stat.type(yytext); }
+"concurrent_queue"     { stat.type(yytext); }
+"concurrent_bounded_queue" { stat.type(yytext); }
+"concurrent_priority_queue" { stat.type(yytext); }
+"concurrent_hash_map"  { stat.type(yytext); }
+"concurrent_unordered_map" { stat.type(yytext); }
+"concurrent_unordered_set" { stat.type(yytext); }
+
+"combinable"           { stat.type(yytext); }
+"enumerable_thread_specific" { stat.type(yytext); }
+"strict_ppl"           { stat.keyword(yytext); }
+"tick_count"           { stat.type(yytext); }
+
+  /* oneTBB synchronization operators and functions */
+"atomic"               { stat.type(yytext); }
+"mutex"                { stat.type(yytext); }
+"spin_mutex"           { stat.type(yytext); }
+"recursive_mutex"      { stat.type(yytext); }
+"queuing_mutex"        { stat.type(yytext); }
+"spin_rw_mutex"        { stat.type(yytext); }
+"queuing_rw_mutex"     { stat.type(yytext); }
+"reader_writer_lock"   { stat.type(yytext); }
+
+  /* Specific oneTBB functions used for the creation of parallel_pipeline */
+"make_filter"          { stat.keyword(yytext); }
+"tbb::filter_mode::parallel"                   { stat.keyword(yytext); }
+"tbb::filter_mode::serial_out_of_order"        { stat.keyword(yytext); }
+
+  /* Specific oneTBB functions used for the creation of task flow graphs */
+"tbb::flow::make_edge"      { stat.keyword(yytext); }
+"tbb::flow::input_port"     { stat.keyword(yytext); }
+"tbb::flow::output_port"    { stat.keyword(yytext); }
+"tbb::flow::remove_edge"    { stat.keyword(yytext); stat.decOp(); }
+"tbb::flow::continue_node"  { stat.type(yytext); }
+"tbb::flow::function_node"  { stat.type(yytext); }
+"tbb::flow::broadcast_node" { stat.type(yytext); }
+"tbb::flow::join_node"      { stat.type(yytext); }
+"tbb::flow::split_node"     { stat.type(yytext); }
+"tbb::flow::overwrite_node" { stat.type(yytext); }
+"tbb::flow::write_once_node" { stat.type(yytext); }
+"tbb::flow::sequencer_node" { stat.type(yytext); }
+"tbb::flow::limiter_node"   { stat.type(yytext); }
+"tbb::flow::source_node"            { stat.type(yytext); }
+"tbb::flow::priority_queue_node"    { stat.type(yytext); }
+"tbb::flow::buffer_node"            { stat.type(yytext); }
+"tbb::flow::async_node"             { stat.type(yytext); }
+"tbb::flow::indexer_node"           { stat.type(yytext); }
+"tbb::flow::input_node"             { stat.type(yytext); }
+"tbb::flow::output_node"            { stat.type(yytext); }
+"tbb::flow::multifunction_node"     { stat.type(yytext); }
+"tbb::flow::graph"                  { stat.type(yytext); }
+
+  /* Specific oneTBB functions for parallelism and task control */
+"parallel_invoke"              { stat.keyword(yytext); stat.cond(); }
+"parallel_do"                  { stat.keyword(yytext); stat.cond(); }
+"parallel_sort"                { stat.keyword(yytext); stat.cond(); }
+"parallel_for_each"            { stat.keyword(yytext); stat.cond(); }
+"enqueue"                { stat.keyword(yytext); }
+"execute"                { stat.keyword(yytext); }
+"wait_for_all"           { stat.keyword(yytext); }
+"reserve_wait"                { stat.keyword(yytext); }
+"try_put"                     { stat.keyword(yytext); }
+"release_wait"                { stat.keyword(yytext); }
+"tbb::flow::reserving"       { stat.keyword(yytext); }
+"tbb::flow::unlimited"       { stat.keyword(yytext); }
 
   /***************** SYCL - specific ***************/
 cl::sycl     { stat.keyword(yytext); }
 sycl         { stat.keyword(yytext); }
-queue        { stat.type(yytext); }
+"sycl::queue"        { stat.type(yytext); }
 buffer       { stat.type(yytext); }
 accessor     { stat.type(yytext); }
 range        { stat.type(yytext); }
