@@ -96,7 +96,7 @@ void printHeader(const std::string& title, const std::string& color);
  * Any other arguments are treated as file paths to be analyzed. 
  * The function returns a vector of these file paths.
  */
-std::vector<std::filesystem::path> parseArguments(int argc, char* argv[], int& verbosity, bool& functionMetricsFlag, bool& fileMetricsFlag, bool& globalMetricsFlag);
+std::vector<std::filesystem::path> parseArguments(int argc, char* argv[], int& verbosity, bool& functionMetricsFlag, bool& fileMetricsFlag, bool& globalMetricsFlag, bool& printCodeFlag);
 
 /**
  * @brief Extracts all functions from a given source code file.

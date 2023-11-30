@@ -42,14 +42,14 @@ void deleteTemporaryFile(const std::string& filename) {
 // Prints a formatted header for output sections
 void printHeader(const std::string& title, const std::string& color) {
     std::cout << color; // Set the desired color for the header
-    std::cout << "\n" << std::string(60, '=') << "\n"; // Print a line of '=' characters
+    std::cout << "\n" << std::string(80, '=') << "\n"; // Print a line of '=' characters
     std::cout << title << "\n"; // Print the title of the header
-    std::cout << std::string(60, '=') << "\n"; // Print another line of '=' characters
+    std::cout << std::string(80, '=') << "\n"; // Print another line of '=' characters
     std::cout << RESET; // Reset the color to default
 }
 
 // Parses command-line arguments and returns a vector of file paths
-std::vector<std::filesystem::path> parseArguments(int argc, char* argv[], int& verbosity, bool& functionMetricsFlag, bool& fileMetricsFlag, bool& globalMetricsFlag) {
+std::vector<std::filesystem::path> parseArguments(int argc, char* argv[], int& verbosity, bool& functionMetricsFlag, bool& fileMetricsFlag, bool& globalMetricsFlag, bool& printCodeFlag) {
     std::vector<std::filesystem::path> filepaths; // Vector to store parsed file paths
 
     // Loop through all command-line arguments
@@ -65,6 +65,8 @@ std::vector<std::filesystem::path> parseArguments(int argc, char* argv[], int& v
             fileMetricsFlag = true; // Enable file metrics analysis
         } else if (arg == "-g" || arg == "--global-metrics") {
             globalMetricsFlag = true; // Enable global metrics analysis
+        } else if (arg == "-p" || arg == "--print-functions") {
+            printCodeFlag = true; // Enable printing of function contents
         } else if (arg == "-h" || arg == "--help") {
             usage(); // Display usage information and exit
         } else {
@@ -155,7 +157,7 @@ void usage() {
     std::cout << GREEN << "C++ Code Complexity Measurement System" << RESET << "\n\n";
 
     // Usage
-    std::cout << YELLOW << "Usage:" << RESET << " c3ms [-h] [-f] [-a] [-g] [-v level] <files>\n\n";
+    std::cout << YELLOW << "Usage:" << RESET << " c3ms [-h] [-f] [-a] [-g] [-p DEBUG] [-v level] <files>\n\n";
 
     // Options
     std::cout << CYAN << "Options:" << RESET << "\n";
@@ -163,6 +165,7 @@ void usage() {
     std::cout << "-f, --function-metrics     " << MAGENTA << "Analyze and report metrics for each function" << RESET << "\n";
     std::cout << "-a, --file-metrics         " << MAGENTA << "Analyze and report metrics for each file" << RESET << "\n";
     std::cout << "-g, --global-metrics       " << MAGENTA << "Analyze and report global metrics across all files" << RESET << "\n";
+    std::cout << "-p, --print-functions      " << MAGENTA << "Print the contents of each function (DEBUG)" << RESET << "\n";
     std::cout << "-v, --verbosity [level]    " << MAGENTA << "Set verbosity level (1-3)" << RESET << "\n\n";
 
     // Verbosity levels

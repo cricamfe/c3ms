@@ -33,9 +33,10 @@ int main(int argc, char* argv[]) {
     bool fileMetricsFlag = false;
     bool functionMetricsFlag = false;
     bool globalMetricsFlag = false;
+    bool printCodeFlag = false;
 
     // Parse command-line arguments and get file paths to analyze
-    auto filepaths = parseArguments(argc, argv, verbosity, functionMetricsFlag, fileMetricsFlag, globalMetricsFlag);
+    auto filepaths = parseArguments(argc, argv, verbosity, functionMetricsFlag, fileMetricsFlag, globalMetricsFlag, printCodeFlag);
 
     // Display usage information if no file paths are provided
     if (filepaths.empty()) {
@@ -87,8 +88,10 @@ int main(int argc, char* argv[]) {
                     // Print the function contents if debugging is enabled
                     if constexpr (DEBUG) {
                         std::clog << "Function: " << func.name << " (" << linesOfCodeFunc << " lines)" << std::endl;
-                        std::clog << func.code << std::endl;
                         std::clog << "Lines of code: " << linesOfCodeFunc << std::endl;
+                        if (printCodeFlag) { std::clog << func.code << std::endl; }
+                        std::clog << fileCS.printOperators() << std::endl;
+                        std::clog << fileCS.printOperands() << std::endl;
                     }
 
                     // Clean up the temporary file
@@ -120,6 +123,7 @@ int main(int argc, char* argv[]) {
 
             // Calculate and report metrics for the file
             MetricsCalculator metrics(cs, linesOfCode);
+            std::cout << "File: " << filePath.filename().string() << " (" << linesOfCode << " lines)" << std::endl;
             if (fileMetricsFlag || (!functionMetricsFlag && !globalMetricsFlag)) {
                 printHeader("File Metrics: " + filePath.filename().string(), GREEN);
                 metrics.report(verbosity, filePath.filename().string(), linesOfCode, cs);
@@ -128,12 +132,16 @@ int main(int argc, char* argv[]) {
             // Print the file contents if debugging is enabled
             if constexpr (DEBUG) {
                 std::clog << "File: " << filePath.filename().string() << " (" << linesOfCode << " lines)" << std::endl;
-                std::ifstream file(filePath);
-                std::string line;
-                while (std::getline(file, line)) {
-                    std::clog << line << std::endl;
-                }
                 std::clog << "Lines of code: " << linesOfCode << std::endl;
+                if (printCodeFlag) {
+                    std::ifstream file(filePath);
+                    std::string line;
+                    while (std::getline(file, line)) {
+                        std::clog << line << std::endl;
+                    }
+                }
+                std::clog << cs.printOperators() << std::endl;
+                std::clog << cs.printOperands() << std::endl;
             }
 
             // Aggregate file metrics into global metrics
