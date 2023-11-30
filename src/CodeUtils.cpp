@@ -49,24 +49,30 @@ void printHeader(const std::string& title, const std::string& color) {
 }
 
 // Parses command-line arguments and returns a vector of file paths
-std::vector<std::filesystem::path> parseArguments(int argc, char* argv[], int& verbosity, bool& analyzeFunctions) {
-    std::vector<std::filesystem::path> filepaths; // Vector to store file paths
+std::vector<std::filesystem::path> parseArguments(int argc, char* argv[], int& verbosity, bool& functionMetricsFlag, bool& fileMetricsFlag, bool& globalMetricsFlag) {
+    std::vector<std::filesystem::path> filepaths; // Vector to store parsed file paths
 
     // Loop through all command-line arguments
     for (int i = 1; i < argc; ++i) {
-        std::string arg = argv[i];
-        // Check for verbosity flag and set the verbosity level
+        std::string arg = argv[i]; // Current argument
+
+        // Check if the argument is verbosity flag and next argument is available
         if ((arg == "-v" || arg == "--verbosity") && i + 1 < argc) {
-            verbosity = std::stoi(argv[++i]); // Convert string to integer
-        } else if (arg == "-f" || arg == "--function") {
-            analyzeFunctions = true; // Set flag to analyze functions
+            verbosity = std::stoi(argv[++i]); // Set verbosity level, converting string to integer
+        } else if (arg == "-f" || arg == "--function-metrics") {
+            functionMetricsFlag = true; // Enable function metrics analysis
+        } else if (arg == "-a" || arg == "--file-metrics") {
+            fileMetricsFlag = true; // Enable file metrics analysis
+        } else if (arg == "-g" || arg == "--global-metrics") {
+            globalMetricsFlag = true; // Enable global metrics analysis
         } else if (arg == "-h" || arg == "--help") {
-            usage(); // Display usage information
+            usage(); // Display usage information and exit
         } else {
             filepaths.emplace_back(argv[i]); // Add file path to the vector
         }
     }
-    return filepaths; // Return the vector of file paths
+
+    return filepaths; // Return the vector of parsed file paths
 }
 
 // Extracts functions from a given file and returns them as a vector
@@ -149,20 +155,22 @@ void usage() {
     std::cout << GREEN << "C++ Code Complexity Measurement System" << RESET << "\n\n";
 
     // Usage
-    std::cout << YELLOW << "Usage:" << RESET << " c3ms [-h] [-f] [-v level] <files>\n\n";
+    std::cout << YELLOW << "Usage:" << RESET << " c3ms [-h] [-f] [-a] [-g] [-v level] <files>\n\n";
 
     // Options
     std::cout << CYAN << "Options:" << RESET << "\n";
     std::cout << "-h, --help                 " << MAGENTA << "Show this help message" << RESET << "\n";
-    std::cout << "-f, --methods              " << MAGENTA << "Analyze functions instead of files" << RESET << "\n";
-    std::cout << "-v, --verbosity [level]    " << MAGENTA << "Set verbosity level (0-3)" << RESET << "\n\n";
+    std::cout << "-f, --function-metrics     " << MAGENTA << "Analyze and report metrics for each function" << RESET << "\n";
+    std::cout << "-a, --file-metrics         " << MAGENTA << "Analyze and report metrics for each file" << RESET << "\n";
+    std::cout << "-g, --global-metrics       " << MAGENTA << "Analyze and report global metrics across all files" << RESET << "\n";
+    std::cout << "-v, --verbosity [level]    " << MAGENTA << "Set verbosity level (1-3)" << RESET << "\n\n";
 
     // Verbosity levels
     std::cout << BLUE << "Verbosity levels:" << RESET << "\n";
-    std::cout << "    0 - " << GREEN << "No additional metrics (default)" << RESET << "\n";
     std::cout << "    1 - " << GREEN << "Basic metrics (Effort, Volume, Conditions, Cyclomatic Complexity, Difficulty, Time Required, Bugs, Maintainability)" << RESET << "\n";
     std::cout << "    2 - " << GREEN << "Basic metrics and Additional Statistics (Types, Constants, Identifiers, Cspecs, Keywords, Operators)" << RESET << "\n";
     std::cout << "    3 - " << GREEN << "All above metrics and Detailed Metrics (n1 - unique operators, n2 - unique operands, N1 - total operators, N2 - total operands)" << RESET << "\n";
+
     // Exit the program after displaying usage information
     exit(EXIT_SUCCESS);
 }

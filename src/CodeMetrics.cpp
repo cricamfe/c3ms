@@ -47,14 +47,12 @@ void MetricsCalculator::report(int verbosity, const std::string& filePath, const
     };
 
     // Generate report based on verbosity level
-    if (verbosity > 0) {
-        // Basic metrics
-        reportStream << formatMetric("Effort", effort) << formatMetric("Volume", volume)
-                     << formatMetric("Conditions", conditions) << formatMetric("Cyclomatic Complexity", cyclomaticComplexity)
-                     << formatMetric("Difficulty", difficulty) << formatMetric("Time Required", timeRequired, "seconds")
-                     << formatMetric("Bugs", numberOfBugs, "delivered") << formatMetric("Maintainability", maintainabilityIndex)
-                     << std::string(60, '-') << "\n";
-    }
+    // Default verbosity level is 1
+    reportStream << formatMetric("Effort", effort) << formatMetric("Volume", volume)
+                    << formatMetric("Conditions", conditions) << formatMetric("Cyclomatic Complexity", cyclomaticComplexity)
+                    << formatMetric("Difficulty", difficulty) << formatMetric("Time Required", timeRequired, "seconds")
+                    << formatMetric("Bugs", numberOfBugs, "delivered") << formatMetric("Maintainability", maintainabilityIndex)
+                    << std::string(60, '-') << "\n";
 
     if (verbosity > 2) {
         // Detailed metrics

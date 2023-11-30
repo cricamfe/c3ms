@@ -29,11 +29,13 @@ extern const CodeStatistics& readFile(const char* fname);
 
 int main(int argc, char* argv[]) {
     // Initialize variables for command-line arguments
-    int verbosity = 0;  // Verbosity level for output
-    bool analyzeFunctions = false; // Flag to analyze functions individually
+    int verbosity = 1;  // Verbosity level for output
+    bool fileMetricsFlag = false;
+    bool functionMetricsFlag = false;
+    bool globalMetricsFlag = false;
 
     // Parse command-line arguments and get file paths to analyze
-    auto filepaths = parseArguments(argc, argv, verbosity, analyzeFunctions);
+    auto filepaths = parseArguments(argc, argv, verbosity, functionMetricsFlag, fileMetricsFlag, globalMetricsFlag);
 
     // Display usage information if no file paths are provided
     if (filepaths.empty()) {
@@ -58,7 +60,7 @@ int main(int argc, char* argv[]) {
         int fileLinesOfCode = 0; // Initialize line count for the file
 
         // Analyze functions in the file if the flag is set
-        if (analyzeFunctions) {
+        if (functionMetricsFlag) {
             auto functions = extractFunctions(filePath.string()); // Extract functions from the file
             if constexpr (DEBUG) {
                 std::clog << "Functions: " << std::endl;
@@ -77,8 +79,10 @@ int main(int argc, char* argv[]) {
 
                     // Calculate and report metrics for the function
                     MetricsCalculator metricsFunc(csFunc, linesOfCodeFunc);
-                    printHeader("Function Metrics: " + func.name, RED);
-                    metricsFunc.report(verbosity, func.name, linesOfCodeFunc, csFunc);
+                    if (functionMetricsFlag || (!fileMetricsFlag && !globalMetricsFlag)) {
+                        printHeader("Function Metrics: " + func.name, RED);
+                        metricsFunc.report(verbosity, func.name, linesOfCodeFunc, csFunc);
+                    }
 
                     // Print the function contents if debugging is enabled
                     if constexpr (DEBUG) {
@@ -101,7 +105,7 @@ int main(int argc, char* argv[]) {
 
             // Calculate and report metrics for the entire file
             MetricsCalculator fileMetrics(fileCS, fileLinesOfCode);
-            if (verbosity > 0) {
+            if (fileMetricsFlag || (!functionMetricsFlag && !globalMetricsFlag)) {
                 printHeader("File Metrics: " + filePath.filename().string(), GREEN);
                 fileMetrics.report(verbosity, filePath.filename().string(), fileLinesOfCode, fileCS);
             }
@@ -116,8 +120,10 @@ int main(int argc, char* argv[]) {
 
             // Calculate and report metrics for the file
             MetricsCalculator metrics(cs, linesOfCode);
-            printHeader("File Metrics: " + filePath.filename().string(), GREEN);
-            metrics.report(verbosity, filePath.filename().string(), linesOfCode, cs);
+            if (fileMetricsFlag || (!functionMetricsFlag && !globalMetricsFlag)) {
+                printHeader("File Metrics: " + filePath.filename().string(), GREEN);
+                metrics.report(verbosity, filePath.filename().string(), linesOfCode, cs);
+            }
 
             // Print the file contents if debugging is enabled
             if constexpr (DEBUG) {
@@ -138,7 +144,7 @@ int main(int argc, char* argv[]) {
 
     // Calculate and report global metrics across all files
     MetricsCalculator globalMetrics(globalCs, globalLinesOfCode);
-    if (verbosity > 0) {
+    if (globalMetricsFlag || (!fileMetricsFlag && !functionMetricsFlag)) {
         printHeader("Global Metrics", YELLOW);
         globalMetrics.report(verbosity, "Global", globalLinesOfCode, globalCs);
     }

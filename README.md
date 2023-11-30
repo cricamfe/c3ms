@@ -33,9 +33,12 @@ Additionally, the tool outputs Halstead's volume and counts the number of condit
 
 ### Options
 
-- `-f`,`--function`: Analyzes the effort for each function in the provided files.
+- `-h`, `--help`: Show this help message.
+- `-f`, `--function-metrics`: Analyze and report metrics for each function.
+- `-a`, `--file-metrics`: Analyze and report metrics for each file.
+- `-g`, `--global-metrics`: Analyze and report global metrics across all files.
 - `-v [level]`, `--verbosity [level]`: Adjusts the output detail level.
-  - **Level 0**: No additional metrics (default).
-  - **Level 1**: Basic metrics (Effort, Volume, Conditions, Cyclomatic Complexity, Difficulty, Time Required, Bugs, Maintainability).
-  - **Level 2**: Basic metrics and Additional Statistics (Types, Constants, Identifiers, Cspecs, Keywords, Operators).
-  - **Level 3**: All the above metrics plus Detailed Metrics (n1 - unique operators, n2 - unique operands, N1 - total operators, N2 - total operands).
+  - **Level 1:** Basic metrics _(Effort, Volume, Conditions, Cyclomatic Complexity, Difficulty, Time Required, Bugs, Maintainability)_
+  - **Level 2:** Basic metrics and Additional Statistics _(Types, Constants, Identifiers, Cspecs, Keywords, Operators)_
+  - **Level 3:** All the above metrics plus Detailed Metrics _(n1 - unique operators, n2 - unique operands, N1 - total operators, N2 - total operands)_
+  

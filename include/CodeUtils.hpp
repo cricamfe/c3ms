@@ -77,21 +77,26 @@ void deleteTemporaryFile(const std::string& filename);
 void printHeader(const std::string& title, const std::string& color);
 
 /**
- * @brief Parses command line arguments.
+ * @brief Parses command-line arguments and returns a vector of file paths.
  * 
- * @param argc The number of command line arguments.
- * @param argv The array of command line arguments.
+ * @param argc The number of command-line arguments.
+ * @param argv The array of command-line arguments.
  * @param verbosity The verbosity level to be set based on the arguments.
- * @param analyzeFunctions A flag to be set if function-level analysis is requested.
+ * @param functionMetricsFlag A flag to be set if function-level metrics are requested.
+ * @param fileMetricsFlag A flag to be set if file-level metrics are requested.
+ * @param globalMetricsFlag A flag to be set if global metrics are requested.
  * @return std::vector<std::filesystem::path> A vector of file paths to be analyzed.
  * 
- * @details This function parses the command line arguments provided to the program. 
+ * @details This function parses the command-line arguments provided to the program. 
  * It recognizes the following options: '-v' or '--verbosity' followed by a number to set the verbosity level, 
- * '-f' or '--function' to request function-level analysis, and '-h' or '--help' to display usage information. 
+ * '-f' or '--function-metrics' to request function-level metrics, 
+ * '-a' or '--file-metrics' to request file-level metrics, 
+ * '-g' or '--global-metrics' to request global metrics, 
+ * and '-h' or '--help' to display usage information. 
  * Any other arguments are treated as file paths to be analyzed. 
  * The function returns a vector of these file paths.
  */
-std::vector<std::filesystem::path> parseArguments(int argc, char* argv[], int& verbosity, bool& analyzeFunctions);
+std::vector<std::filesystem::path> parseArguments(int argc, char* argv[], int& verbosity, bool& functionMetricsFlag, bool& fileMetricsFlag, bool& globalMetricsFlag);
 
 /**
  * @brief Extracts all functions from a given source code file.
