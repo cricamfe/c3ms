@@ -1,6 +1,4 @@
-# Copyright (c) 2009, 2010 Basilio B. Fraguela. Universidade da Coruña
-# Upgrade (2023) by Campos-Ferrer, Cristian. Universidad de Málaga
-
+# Configuración básica
 INCL := include
 SRC := src
 OBJ := obj
@@ -8,10 +6,11 @@ BIN := bin
 DEBUG_DIR := debug
 RELEASE_DIR := release
 
-CC  := gcc
+# Compiladores
+CC := gcc
 CXX := g++
 
-# Determinar modo de compilación y configurar las carpetas correspondientes
+# Modo de compilación
 ifdef DEBUG
   BUILD_DIR := $(DEBUG_DIR)
   CFLAGS := -I$(INCL) -g -DDEBUG
@@ -22,11 +21,14 @@ else
   CPPFLAGS := -I$(INCL) -O3
 endif
 
-# Definir archivos fuente y objetos
-SRCS := $(wildcard $(SRC)/*.cpp) $(wildcard *.cpp) $(INCL)/c3ms.tab.cpp $(INCL)/c3mslex.cpp
-OBJS := $(patsubst $(SRC)/%.cpp,$(OBJ)/$(BUILD_DIR)/%.o,$(wildcard $(SRC)/*.cpp)) \
-        $(patsubst %.cpp,$(OBJ)/$(BUILD_DIR)/%.o,$(wildcard *.cpp)) \
-        $(patsubst $(INCL)/%.cpp,$(OBJ)/$(BUILD_DIR)/%.o,$(INCL)/c3ms.tab.cpp $(INCL)/c3mslex.cpp)
+# Archivos fuente explícitos
+# Añadir aquí nuevos archivos .cpp
+SRC_FILES := src/CodeMetrics.cpp src/CodeUtils.cpp c3ms.cpp
+
+# Archivos objeto
+OBJS := $(patsubst %.cpp,$(OBJ)/$(BUILD_DIR)/%.o,$(notdir $(SRC_FILES))) \
+        $(OBJ)/$(BUILD_DIR)/c3ms.tab.o \
+        $(OBJ)/$(BUILD_DIR)/c3mslex.o
 
 # Nombre del ejecutable
 EXECUTABLE := c3ms
@@ -49,16 +51,22 @@ $(OBJ)/$(BUILD_DIR)/%.o: %.cpp
 	@mkdir -p $(@D)
 	$(CXX) -c $(CPPFLAGS) $< -o $@
 
-$(OBJ)/$(BUILD_DIR)/%.o: $(INCL)/%.cpp
+# Reglas para bison y flex
+$(OBJ)/$(BUILD_DIR)/c3ms.tab.o: $(INCL)/c3ms.tab.cpp
 	@mkdir -p $(@D)
 	$(CXX) -c $(CPPFLAGS) $< -o $@
 
 $(INCL)/c3ms.tab.cpp: $(INCL)/c3ms.y
 	bison -d -o $@ $<
 
+$(OBJ)/$(BUILD_DIR)/c3mslex.o: $(INCL)/c3mslex.cpp
+	@mkdir -p $(@D)
+	$(CXX) -c $(CPPFLAGS) $< -o $@
+
 $(INCL)/c3mslex.cpp: $(INCL)/c3ms.l $(INCL)/c3ms.tab.cpp
 	flex -Cemr -o $@ $<
 
+# Limpieza
 clean:
 	-@rm -f $(OBJ)/$(DEBUG_DIR)/*.o $(OBJ)/$(RELEASE_DIR)/*.o $(INCL)/c3ms.tab* $(INCL)/c3mslex.cpp
 
