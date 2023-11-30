@@ -55,13 +55,11 @@ int main(int argc, char* argv[]) {
             std::cerr << "Error: " << filePath << " not accessible or invalid\n";
             continue; // Skip to the next file if this one is invalid
         }
-        
-        // Initialize file statistics
-        CodeStatistics fileCS; // Initialize code statistics for the file
-        int fileLinesOfCode = 0; // Initialize line count for the file
 
         // Analyze functions in the file if the flag is set
         if (functionMetricsFlag) {
+            CodeStatistics fileCS; // Initialize file statistics
+            int fileLinesOfCode = 0; // Initialize file line count
             auto functions = extractFunctions(filePath.string()); // Extract functions from the file
             if constexpr (DEBUG) {
                 std::clog << "Functions: " << std::endl;
@@ -90,8 +88,8 @@ int main(int argc, char* argv[]) {
                         std::clog << "Function: " << func.name << " (" << linesOfCodeFunc << " lines)" << std::endl;
                         std::clog << "Lines of code: " << linesOfCodeFunc << std::endl;
                         if (printCodeFlag) { std::clog << func.code << std::endl; }
-                        std::clog << fileCS.printOperators() << std::endl;
-                        std::clog << fileCS.printOperands() << std::endl;
+                        std::clog << csFunc.printOperators() << std::endl;
+                        std::clog << csFunc.printOperands() << std::endl;
                     }
 
                     // Clean up the temporary file
@@ -118,21 +116,21 @@ int main(int argc, char* argv[]) {
             globalLinesOfCode += fileLinesOfCode;
         } else {
             // Process the entire file if function analysis is not required
-            const CodeStatistics& cs = readFile(filePath.string().c_str());
-            int linesOfCode = countLinesOfCode(filePath.string());
+            const CodeStatistics& fileCS = readFile(filePath.string().c_str());
+            int fileLinesOfCode = countLinesOfCode(filePath.string());
 
             // Calculate and report metrics for the file
-            MetricsCalculator metrics(cs, linesOfCode);
-            std::cout << "File: " << filePath.filename().string() << " (" << linesOfCode << " lines)" << std::endl;
+            MetricsCalculator metrics(fileCS, fileLinesOfCode);
+            std::cout << "File: " << filePath.filename().string() << " (" << fileLinesOfCode << " lines)" << std::endl;
             if (fileMetricsFlag || (!functionMetricsFlag && !globalMetricsFlag)) {
                 printHeader("File Metrics: " + filePath.filename().string(), GREEN);
-                metrics.report(verbosity, filePath.filename().string(), linesOfCode, cs);
+                metrics.report(verbosity, filePath.filename().string(), fileLinesOfCode, fileCS);
             }
 
             // Print the file contents if debugging is enabled
             if constexpr (DEBUG) {
-                std::clog << "File: " << filePath.filename().string() << " (" << linesOfCode << " lines)" << std::endl;
-                std::clog << "Lines of code: " << linesOfCode << std::endl;
+                std::clog << "File: " << filePath.filename().string() << " (" << fileLinesOfCode << " lines)" << std::endl;
+                std::clog << "Lines of code: " << fileLinesOfCode << std::endl;
                 if (printCodeFlag) {
                     std::ifstream file(filePath);
                     std::string line;
@@ -140,13 +138,13 @@ int main(int argc, char* argv[]) {
                         std::clog << line << std::endl;
                     }
                 }
-                std::clog << cs.printOperators() << std::endl;
-                std::clog << cs.printOperands() << std::endl;
+                std::clog << fileCS.printOperators() << std::endl;
+                std::clog << fileCS.printOperands() << std::endl;
             }
 
             // Aggregate file metrics into global metrics
-            globalCs += cs;
-            globalLinesOfCode += linesOfCode;
+            globalCs += fileCS;
+            globalLinesOfCode += fileLinesOfCode;
         }
     }
 
