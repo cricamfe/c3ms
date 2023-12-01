@@ -283,8 +283,6 @@ simd_f       { stat.type(yytext); }
 stdx::where   { stat.keyword(yytext); stat.decOp(); }
 stdx::reduce  { stat.keyword(yytext); stat.decOp(); }
 element_aligned { stat.keyword(yytext); }
-    
-{L}({L}|{D})*	{ stat.identifier(yytext); }
 
   /***************** operators ***************/
     
@@ -336,13 +334,7 @@ element_aligned { stat.keyword(yytext); }
 "|"		{ stat.op(yytext); }
 "?"		{ stat.op(yytext); }
 
-{L}({L}|{D})*\s*\({L}? {
-  char funcName[256];
-  strncpy(funcName, yytext, strcspn(yytext, "("));
-  funcName[strcspn(yytext, "(")] = '\0';  // Terminate the string before '('
-  stat.op(funcName); // Detect function calls without including '('
-  stat.op("(");
-}
+{L}({L}|{D})*	{ stat.keyword(yytext); }
 
 \\      { /* macro continuation */ }
 
