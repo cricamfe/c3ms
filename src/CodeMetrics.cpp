@@ -28,7 +28,7 @@ void MetricsCalculator::calculateMetrics() {
 }
 
 // Method to report the calculated metrics
-void MetricsCalculator::report(int verbosity, const std::string& filePath, const int linesOfCode, const CodeStatistics& cs) const {
+void MetricsCalculator::report(int verbosity, const std::string& filePath, int loc, const CodeStatistics& cs) const {
     std::ostringstream reportStream; // Stream to build the report
     const int nameWidth = 45; // Column width for metric names
     const int valueWidth = 15; // Column width for metric values
