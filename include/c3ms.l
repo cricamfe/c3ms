@@ -335,11 +335,13 @@ element_aligned { stat.keyword(yytext); }
 "|"		{ stat.op(yytext); }
 "?"		{ stat.op(yytext); }
 
-{L}({L}|{D})*	{ stat.keyword(yytext); }
-
-[a-zA-Z_][a-zA-Z0-9_]*\s*\([^()]*\) {
+  /******** Function Calls *********/
+[a-zA-Z_][a-zA-Z0-9_]*\s*\(([^)]|\s*\([^\)]*\))*\) {
+  printf("function: %s\n", yytext);
   processFunction(yytext);
 }
+  /***************** identifiers ***************/
+{L}({L}|{D})*	{ stat.identifier(yytext); }
 
 \\      { /* macro continuation */ }
 
