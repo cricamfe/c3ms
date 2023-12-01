@@ -64,7 +64,7 @@ $(OBJ)/$(BUILD_DIR)/c3mslex.o: $(INCL)/c3mslex.cpp
 	$(CXX) -c $(CPPFLAGS) $< -o $@
 
 $(INCL)/c3mslex.cpp: $(INCL)/c3ms.l $(INCL)/c3ms.tab.cpp
-	flex -Cemr -o $@ $<
+	flex -o $@ $<
 
 # Documentación
 doc:
