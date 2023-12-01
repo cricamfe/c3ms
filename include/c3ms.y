@@ -9,6 +9,7 @@
 	#include <stdio.h>
 	#include <string.h>
 	#include <ctype.h>
+    #include <stdlib.h>
 
 	#include "CodeStatisticsGatherer.h"
   
@@ -35,31 +36,60 @@ void identifier(const char* arg) {
 
 void extractVariableNames(const char* arg) {
     char buffer[1024];
+    char *tokens[3];
     const char *ampersand = strchr(arg, '&');
     const char *start = ampersand ? ampersand + 1 : arg;
     const char *bracket = strchr(start, '[');
+    char *part1, *part2;
 
+    strcpy(buffer, start);
     if (bracket) {
-        strncpy(buffer, start, bracket - start);
         buffer[bracket - start] = '\0';
-        trimSpaces(buffer);
-        // printf("Argument: %s\n", buffer); // First variable (e.g., fr_ptr)
-        stat.identifier(buffer);
-
-        start = bracket + 1;
-        bracket = strchr(start, '[');
-        if (bracket) {
-            strncpy(buffer, start, bracket - start);
-            buffer[bracket - start] = '\0';
-            trimSpaces(buffer);
-            // printf("Argument: %s\n", buffer); // Nested variable (e.g., pixel_offsets)
-            stat.identifier(buffer);
-        }
+        part1 = buffer;
+        part2 = buffer + (bracket - start) + 1;
     } else {
-        strcpy(buffer, start);
-        trimSpaces(buffer);
-        stat.identifier(buffer);
-        // printf("Argument: %s\n", buffer);
+        part1 = buffer;
+        part2 = NULL;
+    }
+
+    char *token = strtok(part1, " ");
+    int count = 0;
+    while (token != NULL && count < 3) {
+        tokens[count++] = token;
+        token = strtok(NULL, " ");
+    }
+
+    if (count == 3) {
+        // printf("Const: %s\n", tokens[0]);
+        // printf("Type: %s\n", tokens[1]);
+        // printf("Name: %s\n", tokens[2]);
+        stat.cspec(tokens[0]);
+        stat.type(tokens[1]);
+        stat.identifier(tokens[2]);
+    } else if (count == 2) {
+        // printf("Type: %s\n", tokens[0]);
+        // printf("Name: %s\n", tokens[1]);
+        stat.type(tokens[0]);
+        stat.identifier(tokens[1]);
+    } else if (count == 1) {
+        // printf("Name: %s\n", tokens[0]);
+        stat.identifier(tokens[0]);
+    }
+
+    if (part2) {
+        char *end;
+        token = strtok(part2, "[]");
+        while (token != NULL) {
+            long val = strtol(token, &end, 10);
+            if (end != token) {
+                // printf("Number: %s\n", token);
+                stat.constant(token);
+            } else {
+                // printf("Variable: %s\n", token);
+                stat.identifier(token);
+            }
+            token = strtok(NULL, "[]");
+        }
     }
 }
 
