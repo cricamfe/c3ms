@@ -14,6 +14,7 @@
 
   
   extern YYSTYPE yylval;
+	extern void processFunction(char *functionString);
   
   int ParserLineno;
   CodeStatisticsGatherer stat;
@@ -335,6 +336,10 @@ element_aligned { stat.keyword(yytext); }
 "?"		{ stat.op(yytext); }
 
 {L}({L}|{D})*	{ stat.keyword(yytext); }
+
+[a-zA-Z_][a-zA-Z0-9_]*\s*\([^()]*\) {
+  processFunction(yytext);
+}
 
 \\      { /* macro continuation */ }
 
