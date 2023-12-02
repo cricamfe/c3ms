@@ -90,6 +90,8 @@ int main(int argc, char* argv[]) {
                         if (printCodeFlag) { std::clog << func.code << std::endl; }
                         std::clog << csFunc.printOperators() << std::endl;
                         std::clog << csFunc.printOperands() << std::endl;
+                        std::clog << csFunc.printApiFunctionCalls() << std::endl;
+                        std::clog << csFunc.printCustomFunctionCalls() << std::endl;
                     }
 
                     // Clean up the temporary file

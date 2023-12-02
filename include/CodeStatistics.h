@@ -31,13 +31,15 @@ public:
      * @brief Resets all the statistics to zero.
      */
     void reset() {
-        types = constants = identifiers = cspecs = keywords = operators = conditions = 0;
+        types = constants = identifiers = cspecs = keywords = operators = conditions = customFunctionCalls = apiFunctionCalls = 0;
         typesSet.clear();
         constantsSet.clear();
         identifiersSet.clear();
         cspecsSet.clear();
         keywordsSet.clear();
         operatorsSet.clear();
+        customFunctionCallsSet.clear();
+        apiFunctionCallsSet.clear();
     }
 
     /**
@@ -76,6 +78,18 @@ public:
      * @param p The operator token.
      */
     void op(std::string_view p)         { operators++;   operatorsSet[std::string(p)]++; }
+    /**
+     * @brief Increments the count of a customFunctionCall token.
+     * 
+     * @param p The condition token.
+     */
+    void customFunctionCall(std::string_view p) { customFunctionCalls++; customFunctionCallsSet[std::string(p)]++; }
+    /**
+     * @brief Increments the count of an apiFunctionCall token.
+     * 
+     * @param p The condition token.
+     */
+    void apiFunctionCall(std::string_view p) { apiFunctionCalls++; apiFunctionCallsSet[std::string(p)]++; }
 
     /**
      * @brief Decrements the count of an operator token.
@@ -128,6 +142,18 @@ public:
      * @return The total count of condition tokens.
      */
     StatSize getConds()       const { return conditions; }
+    /**
+     * @brief Returns the total count of customFunctionCalls tokens.
+     * 
+     * @return The total count of customFunctionCalls tokens.
+     */
+    StatSize getCustomFunctionCalls() const { return customFunctionCalls; }
+    /**
+     * @brief Returns the total count of apiFunctionCalls tokens.
+     * 
+     * @return The total count of apiFunctionCalls tokens.
+     */
+    StatSize getApiFunctionCalls() const { return apiFunctionCalls; }
 
 
     /**
@@ -179,6 +205,18 @@ public:
      * @return The total count of unique operator tokens.
      */
     StatSize getUniqueOps()         const { return operatorsSet.size(); }
+    /**
+     * @brief Returns the total count of unique customFunctionsCalls tokens.
+     * 
+     * @return The total count of unique customFunctionsCalls tokens.
+     */
+    StatSize getUniqueCustomFunctionCalls() const { return customFunctionCallsSet.size(); }
+    /**
+     * @brief Returns the total count of unique apiFunctionCalls tokens.
+     * 
+     * @return The total count of unique apiFunctionCalls tokens.
+     */
+    StatSize getUniqueApiFunctionCalls() const { return apiFunctionCallsSet.size(); }
 
     /**
      * @brief Returns the total count of unique operand tokens (unique constants + unique identifiers).
@@ -282,6 +320,48 @@ public:
     }
 
     /**
+     * @brief Prints a formatted table of custom function calls and their occurrences.
+     * 
+     * @details This function prints a formatted table of custom function calls and their occurrences.
+     * Each row of the table contains the name of the custom function call and its occurrence count. The table is formatted with a specified column width for the custom function call names and the occurrence counts.
+     * 
+     * @return A string representing the formatted table.
+     */
+    std::string printCustomFunctionCalls() const {
+        const int nameWidth = 45; // Column width for metric names
+        const int valueWidth = 15; // Adjusted column width for metric values
+        const int totalWidth = 80; // Total width for both columns
+        std::ostringstream result;
+        // Adding header
+        printHeader(result, "Custom Function Calls", "Occurrences", nameWidth, valueWidth, totalWidth);
+        // Combining all operand sets into a single table
+        printMetrics(result, customFunctionCallsSet, nameWidth, valueWidth);
+
+        return result.str();
+    }
+
+    /**
+     * @brief Prints a formatted table of API function calls and their occurrences.
+     * 
+     * @details This function prints a formatted table of API function calls and their occurrences.
+     * Each row of the table contains the name of the API function call and its occurrence count. The table is formatted with a specified column width for the API function call names and the occurrence counts.
+     * 
+     * @return A string representing the formatted table.
+     */
+    std::string printApiFunctionCalls() const {
+        const int nameWidth = 45; // Column width for metric names
+        const int valueWidth = 15; // Adjusted column width for metric values
+        const int totalWidth = 80; // Total width for both columns
+        std::ostringstream result;
+        // Adding header
+        printHeader(result, "API Function Calls", "Occurrences", nameWidth, valueWidth, totalWidth);
+        // Combining all operand sets into a single table
+        printMetrics(result, apiFunctionCallsSet, nameWidth, valueWidth);
+
+        return result.str();
+    }
+
+    /**
      * @brief Overloads the += operator to combine the statistics of two CodeStatistics objects.
      * 
      * @details This operator overload allows the statistics of two CodeStatistics objects to be combined. The counts of each type of token are added together, and the sets of unique tokens are merged.
@@ -297,6 +377,8 @@ public:
         keywords += other.keywords;
         operators += other.operators;
         conditions += other.conditions;
+        customFunctionCalls += other.customFunctionCalls;
+        apiFunctionCalls += other.apiFunctionCalls;
 
         typesSet.insert(other.typesSet.begin(), other.typesSet.end());
         constantsSet.insert(other.constantsSet.begin(), other.constantsSet.end());
@@ -304,6 +386,8 @@ public:
         cspecsSet.insert(other.cspecsSet.begin(), other.cspecsSet.end());
         keywordsSet.insert(other.keywordsSet.begin(), other.keywordsSet.end());
         operatorsSet.insert(other.operatorsSet.begin(), other.operatorsSet.end());
+        customFunctionCallsSet.insert(other.customFunctionCallsSet.begin(), other.customFunctionCallsSet.end());
+        apiFunctionCallsSet.insert(other.apiFunctionCallsSet.begin(), other.apiFunctionCallsSet.end());
 
         return *this;
     }
@@ -313,10 +397,14 @@ private:
      * @brief The count of each type of token.
      */
     StatSize types = 0, constants = 0, identifiers = 0, cspecs = 0, keywords = 0, operators = 0, conditions = 0;
+    StatSize customFunctionCalls = 0;
+    StatSize apiFunctionCalls = 0;
     /**
      * @brief The sets of unique tokens of each type.
      */
     CSSet typesSet, constantsSet, identifiersSet, cspecsSet, keywordsSet, operatorsSet;
+    CSSet customFunctionCallsSet;
+    CSSet apiFunctionCallsSet;
 };
 
 #endif //CODESTATISTICS_H

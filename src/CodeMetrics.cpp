@@ -70,7 +70,10 @@ void MetricsCalculator::report(int verbosity, const std::string& filePath, int l
                      << formatMetric("Identifiers", cs.getIdentifiers(), std::to_string(cs.getUniqueIdentifiers()) + " unique")
                      << formatMetric("Cspecs", cs.getCspecs(), std::to_string(cs.getUniqueCspecs()) + " unique")
                      << formatMetric("Keywords", cs.getKeywords(), std::to_string(cs.getUniqueKeywords()) + " unique")
+                     << formatMetric("Function Call (API)", cs.getApiFunctionCalls(), std::to_string(cs.getUniqueApiFunctionCalls()) + " unique")
+                     << formatMetric("Function Call (Dev)", cs.getCustomFunctionCalls(), std::to_string(cs.getUniqueCustomFunctionCalls()) + " unique")
                      << formatMetric("Operators", cs.getOps(), std::to_string(cs.getUniqueOps()) + " unique")
+                     << formatMetric("Operands", cs.getOperands(), std::to_string(cs.getUniqueOperands()) + " unique")
                      << std::string(80, '-') << "\n";
     }
 
