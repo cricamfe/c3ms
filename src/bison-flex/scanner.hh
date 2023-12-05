@@ -9,7 +9,7 @@
 #  define YY_DECL c3ms::CodeParser::token_type                         \
      c3ms::CodeScanner::yylex(c3ms::CodeParser::semantic_type* yylval,    \
                               c3ms::CodeParser::location_type* yylloc, \
-                              c3ms::CodeStatistics& driver)
+                              c3ms::CodeStatistics& stats)
 # endif
 
 
@@ -31,7 +31,7 @@ namespace c3ms {
             virtual CodeParser::token_type yylex(
                 CodeParser::semantic_type* yylval,
                 CodeParser::location_type* yylloc,
-                CodeStatistics& driver);
+                CodeStatistics& stats);
 
             void set_debug(bool b);
     };

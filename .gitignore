@@ -30,12 +30,7 @@
 *.exe
 *.out
 *.app
-
-# Specific files
-*.tab.hpp
-*.tab.cpp
-c3mslex.cpp
-c3ms
+C3MS
 
 # Folder
 build

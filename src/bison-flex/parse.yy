@@ -3,7 +3,7 @@
 #include "parser.hh"
 #include "scanner.hh"
 
-#define yylex driver.scanner_->yylex
+#define yylex stats.scanner_->yylex
 %}
 
 %code requires
@@ -37,8 +37,8 @@
 %debug
 %define api.namespace {c3ms}
 %define api.parser.class {CodeParser}
-%parse-param {CodeStatistics &driver}
-%lex-param {CodeStatistics &driver}
+%parse-param {CodeStatistics &stats}
+%lex-param {CodeStatistics &stats}
 %define parse.error verbose
 
 %union
@@ -55,7 +55,7 @@
 %%
 
 start:
-     /* empty */
+    /* empty */
 ;
 
 
@@ -67,6 +67,6 @@ namespace c3ms
     void CodeParser::error(const location& l, const std::string& m)
     {
         std::cerr << l << ": " << m << std::endl;
-        driver.error_ = (driver.error_ == 127 ? 127 : driver.error_ + 1);
+        stats.error_ = (stats.error_ == 127 ? 127 : stats.error_ + 1);
     }
 }
