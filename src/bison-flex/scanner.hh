@@ -37,4 +37,4 @@ namespace c3ms {
     };
 }
 
-#endif // __C3MSSCANNER_HH__
+#endif // __CODESCANNER_HH__

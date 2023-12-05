@@ -9,7 +9,7 @@
 %code requires
 {
   #include <iostream>
-  #include "driver.hh"
+  #include "codestatistics.hh"
   #include "location.hh"
 }
 

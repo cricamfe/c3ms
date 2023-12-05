@@ -1,6 +1,5 @@
-
-#ifndef DRIVER_HH_
-# define DRIVER_HH_
+#ifndef __CODESTATISTICS_HH_
+# define __CODESTATISTICS_HH_
 
 # include <string>
 # include <iostream>
@@ -38,11 +37,11 @@ namespace c3ms
             std::size_t words = 0;
             std::size_t lines = 0;
 
-            /// Allows Parser and Scanner to access private attributes of the Driver class
+            /// Allows Parser and Scanner to access private attributes of the CodeStatistics class
             friend class CodeParser;
             friend class CodeScanner;
     };
 }
 
-#endif /* !DRIVER_HH_ */
+#endif /* !CODESTATISTICS_HH_ */
 

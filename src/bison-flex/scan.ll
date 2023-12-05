@@ -2,7 +2,7 @@
 
 #include "parser.hh"
 #include "scanner.hh"
-#include "driver.hh"
+#include "codestatistics.hh"
 
 /*  Defines some macros to update locations */
 
