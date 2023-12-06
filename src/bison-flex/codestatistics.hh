@@ -10,6 +10,7 @@
 #include <iomanip>
 #include <memory>
 
+
 namespace c3ms
 {
     /// Forward declarations of classes
@@ -47,8 +48,13 @@ namespace c3ms
             int parse_file(const std::string& path);
 
             void category(StatsCategory counter, std::string_view p);
-            StatSize getCounterValue(StatsCategory counter);
-            StatSize getCSSetSize(StatsCategory set);
+            StatSize getCounterValue(StatsCategory set) const;
+            StatSize getCSSetSize(StatsCategory set) const;
+
+            StatSize getUniqueOperands() const;
+            StatSize getUniqueOperators() const;
+            StatSize getOperands() const;
+            StatSize getOperators() const;
 
             void decOperator();
             void addCondition();

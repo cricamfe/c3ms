@@ -11,7 +11,6 @@ namespace c3ms
     {
         // No need for any other initialization
     }
-
     int CodeStatistics::parse()
     {
         scanner_->switch_streams(&std::cin, &std::cerr);
@@ -44,12 +43,49 @@ namespace c3ms
         }
     }
 
-    CodeStatistics::StatSize CodeStatistics::getCounterValue(StatsCategory counter) {
-        return getCounterReference(counter);
+    CodeStatistics::StatSize CodeStatistics::getCounterValue(StatsCategory set) const {
+        switch (set) {
+            case StatsCategory::TYPE: return nTypes_;
+            case StatsCategory::CONSTANT: return nConstants_;
+            case StatsCategory::IDENTIFIER: return nIdentifiers_;
+            case StatsCategory::CSPECIFIER: return nCSpecifiers_;
+            case StatsCategory::KEYWORD: return nKeywords_;
+            case StatsCategory::OPERATOR: return nOperators_;
+            case StatsCategory::CONDITION: return nConditions_;
+            case StatsCategory::APIFUNCTION: return nAPIFunctions_;
+            case StatsCategory::CUSTOMFUNCTION: return nCustomFunctions_;
+            default: throw std::invalid_argument("Unknown counter type");
+        }        
     }
 
-    CodeStatistics::StatSize CodeStatistics::getCSSetSize(StatsCategory set) {
-        return getCSSetReference(set).size();
+    CodeStatistics::StatSize CodeStatistics::getCSSetSize(StatsCategory set) const {
+        switch (set) {
+            case StatsCategory::TYPE: return typesSet_.size();
+            case StatsCategory::CONSTANT: return constantsSet_.size();
+            case StatsCategory::IDENTIFIER: return identifiersSet_.size();
+            case StatsCategory::CSPECIFIER: return cSpecifiersSet_.size();
+            case StatsCategory::KEYWORD: return keywordsSet_.size();
+            case StatsCategory::OPERATOR: return operatorsSet_.size();
+            case StatsCategory::CONDITION: return conditionsSet_.size();
+            case StatsCategory::APIFUNCTION: return apiFunctionsSet_.size();
+            case StatsCategory::CUSTOMFUNCTION: return customFunctionsSet_.size();
+            default: throw std::invalid_argument("Unknown CSSet type");
+        }
+    }
+
+    CodeStatistics::StatSize CodeStatistics::getUniqueOperands() const  {
+        return getCSSetSize(StatsCategory::CONSTANT) + getCSSetSize(StatsCategory::IDENTIFIER);
+    }
+    CodeStatistics::StatSize CodeStatistics::getUniqueOperators() const {
+        return getCSSetSize(StatsCategory::CSPECIFIER) + getCSSetSize(StatsCategory::KEYWORD) + getCSSetSize(StatsCategory::OPERATOR) + getCSSetSize(StatsCategory::TYPE);
+    }
+
+    CodeStatistics::StatSize CodeStatistics::getOperands() const {
+        return getCounterValue(StatsCategory::CONSTANT) + getCounterValue(StatsCategory::IDENTIFIER);
+    }
+
+    CodeStatistics::StatSize CodeStatistics::getOperators() const {
+        return getCounterValue(StatsCategory::CSPECIFIER) + getCounterValue(StatsCategory::KEYWORD) + getCounterValue(StatsCategory::OPERATOR) + getCounterValue(StatsCategory::TYPE);
     }
 
     void CodeStatistics::decOperator() { nOperators_--; }
