@@ -7,6 +7,8 @@ add_subdirectory(bison-flex)
 add_executable(
   C3MS
   main.cc
+  CodeMetrics.cpp
+  CodeUtils.cpp
 )
 
 target_link_libraries(C3MS c3ms)
