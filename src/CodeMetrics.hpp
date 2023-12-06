@@ -9,7 +9,10 @@
 #include <cmath>
 #include <iostream>
 
-#include "CodeStatistics.h"
+#include "bison-flex/codestatistics.hh"
+
+using namespace c3ms;
+typedef c3ms::CodeStatistics::StatsCategory StatsCategory;
 
 /**
  * @class MetricsCalculator
@@ -23,28 +26,28 @@
  */
 class MetricsCalculator {
 public:
-    /**
-     * @brief Constructor that initializes the metrics based on the given code statistics and lines of code.
-     * 
-     * @param cs The code statistics to use for the calculations.
-     * @param lc The number of lines of code.
-     */
-    MetricsCalculator(const CodeStatistics& cs, int lc);
+        /**
+         * @brief Constructor that initializes the metrics based on the given code statistics and lines of code.
+         * 
+         * @param cs The code statistics to use for the calculations.
+         * @param lc The number of lines of code.
+         */
+        MetricsCalculator(const CodeStatistics& cs, int lc);
 
-    /**
-     * @brief Calculates the metrics.
-     */
-    void calculateMetrics();
+        /**
+         * @brief Calculates the metrics.
+         */
+        void calculateMetrics();
 
-    /**
-     * @brief Generates a report of the metrics.
-     * 
-     * @param verbosity The level of verbosity for the report.
-     * @param filePath The path of the file for which the metrics are calculated.
-     * @param loc The number of lines of code.
-     * @param cs The code statistics.
-     */
-    void report(int verbosity, const std::string& filePath, int loc, const CodeStatistics& cs) const;
+        /**
+         * @brief Generates a report of the metrics.
+         * 
+         * @param verbosity The level of verbosity for the report.
+         * @param filePath The path of the file for which the metrics are calculated.
+         * @param loc The number of lines of code.
+         * @param cs The code statistics.
+         */
+        void report(int verbosity, const std::string& filePath, int loc, CodeStatistics& cs) const;
 
         /**
          * @brief Returns the Halstead volume.
