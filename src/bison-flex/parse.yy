@@ -67,6 +67,7 @@ namespace c3ms
     void CodeParser::error(const location& l, const std::string& m)
     {
         std::cerr << l << ": " << m << std::endl;
-        stats.error_ = (stats.error_ == 127 ? 127 : stats.error_ + 1);
+        int currentError = stats.getError();
+  		stats.setError(currentError == 127 ? 127 : currentError + 1);
     }
 }

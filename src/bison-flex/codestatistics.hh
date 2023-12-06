@@ -8,7 +8,7 @@
 #include <unordered_map>
 #include <string_view>
 #include <iomanip>
-#include <cstring>
+#include <memory>
 
 namespace c3ms
 {
@@ -23,7 +23,10 @@ namespace c3ms
             using StatSize = std::size_t;
             using CSSet = std::unordered_map<std::string, StatSize>;
 
-            enum StatsCategory {
+            /**
+             * @brief Enum class representing different categories for code statistics.
+             */
+            enum class StatsCategory {
                 TYPE,
                 CONSTANT,
                 IDENTIFIER,
@@ -35,29 +38,49 @@ namespace c3ms
                 CUSTOMFUNCTION,
             };
 
+            // Constructors and Destructor
             CodeStatistics();
-            ~CodeStatistics();
 
+            // Public Member Functions
             int parse();
-            int parse(std::istream &iss);
-            int parse_file(std::string& path);
+            int parse(std::istream& iss);
+            int parse_file(const std::string& path);
 
-            void category(StatsCategory counter, const std::string& p);
+            void category(StatsCategory counter, std::string_view p);
             StatSize getCounterValue(StatsCategory counter);
             StatSize getCSSetSize(StatsCategory set);
 
-            void decOperator() { nOperators_--; }
-            void addCondition() { nConditions_++; }
+            void decOperator();
+            void addCondition();
+            /**
+             * @brief Resets the code statistics.
+             * 
+             * This function resets the code statistics to their initial values.
+             */
             void reset();
-            CodeStatistics& operator+=(const CodeStatistics& rhs);
-            void printMetrics(std::ostringstream& result, const CSSet& set, const int nameWidth, const int valueWidth) const;
-            void printHeader(std::ostringstream& result, const std::string& left_header, const std::string& right_header, const int& nameWidth, const int& valueWidth, const int& totalWidth) const;
+
+            void printMetrics(std::ostringstream& result, const CSSet& set, int nameWidth, int valueWidth) const;
+            void printHeader(std::ostringstream& result, std::string_view left_header, std::string_view right_header, int nameWidth, int valueWidth, int totalWidth) const;
             std::string printOperators() const;
             std::string printOperands() const;
+            std::string printCustomFunctions() const;
+            std::string printAPIFunctions() const;
+
+            // Overloaded Operators
+            CodeStatistics& operator+=(const CodeStatistics& rhs);
+
+            // Get and Set Methods for error_
+            int getError() const { return error_; }
+            void setError(int value) { error_ = value; }
 
         private:
-            CodeScanner* scanner_;
-            CodeParser* parser_;
+            // Private Member Functions
+            StatSize& getCounterReference(StatsCategory counter);
+            CSSet& getCSSetReference(StatsCategory set);
+
+            // Member Variables
+            std::shared_ptr<CodeScanner> scanner_;
+            std::shared_ptr<CodeParser> parser_;
             int error_;
 
             StatSize nTypes_ = 0;
@@ -80,14 +103,10 @@ namespace c3ms
             CSSet apiFunctionsSet_;
             CSSet customFunctionsSet_;
 
-            StatSize& getCounterReference(StatsCategory counter);
-            CSSet& getCSSetReference(StatsCategory set);
-
-            /// Allows Parser and Scanner to access private attributes of the CodeStatistics class
+            // Friends of CodeStatistics
             friend class CodeParser;
             friend class CodeScanner;
     };
 }
 
 #endif /* !CODESTATISTICS_HH_ */
-

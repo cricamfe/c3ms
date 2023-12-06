@@ -378,7 +378,8 @@ L?\"(\\.|[^\\"])*\"								{stats.category(SC::CONSTANT,yytext);/*STRING_LITERAL
   /***************** End of File Handling and Error Reporting *****************/
 .	{
 	std::cerr << *yylloc << " Unexpected token : " << *yytext << std::endl;
-	stats.error_ = (stats.error_ == 127 ? 127 : stats.error_ + 1);
+  int currentError = stats.getError();
+  stats.setError(currentError == 127 ? 127 : currentError + 1);
 	STEP ();
 }
 
