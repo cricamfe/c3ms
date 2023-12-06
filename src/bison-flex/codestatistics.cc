@@ -66,7 +66,7 @@ namespace c3ms
         return error_;
     }
 
-    void CodeStatistics::incrementCounter(StatsCategory counter, const std::string& p) {
+    void CodeStatistics::category(StatsCategory counter, const std::string& p) {
         getCounterReference(counter)++;
         auto& setRef = getCSSetReference(counter);
         auto [it, inserted] = setRef.insert({p, 1});
@@ -179,4 +179,17 @@ namespace c3ms
         return result.str();
     }
 
+    std::string CodeStatistics::printOperands() const {
+        const int nameWidth = 45; // Column width for metric names
+        const int valueWidth = 15; // Adjusted column width for metric values
+        const int totalWidth = 80; // Total width for both columns
+        std::ostringstream result;
+        // Adding header
+        printHeader(result, "Operands", "Occurrences", nameWidth, valueWidth, totalWidth);
+        // Combining all operand sets into a single table
+        printMetrics(result, constantsSet_, nameWidth, valueWidth);
+        printMetrics(result, identifiersSet_, nameWidth, valueWidth);
+
+        return result.str();
+    }
 }

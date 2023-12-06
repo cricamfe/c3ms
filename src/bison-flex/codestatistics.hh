@@ -42,28 +42,18 @@ namespace c3ms
             int parse(std::istream &iss);
             int parse_file(std::string& path);
 
-            void incrementCounter(StatsCategory counter, const std::string& p);
+            void category(StatsCategory counter, const std::string& p);
             StatSize getCounterValue(StatsCategory counter);
             StatSize getCSSetSize(StatsCategory set);
 
+            void decOperator() { nOperators_--; }
+            void addCondition() { nConditions_++; }
             void reset();
-
-            // Operator overloading
             CodeStatistics& operator+=(const CodeStatistics& rhs);
-            
-            // Print functions
             void printMetrics(std::ostringstream& result, const CSSet& set, const int nameWidth, const int valueWidth) const;
             void printHeader(std::ostringstream& result, const std::string& left_header, const std::string& right_header, const int& nameWidth, const int& valueWidth, const int& totalWidth) const;
             std::string printOperators() const;
-
-            void printTypeStats() const {
-                printf("Types: %lu\n", nTypes_);
-                for (const auto& element : typesSet_) {
-                    printf("%s %lu\n", element.first.c_str(), element.second);
-                }
-            }
-
-            void type(std::string p)       { nTypes_++;       typesSet_[std::string(p)]++; }
+            std::string printOperands() const;
 
         private:
             CodeScanner* scanner_;
