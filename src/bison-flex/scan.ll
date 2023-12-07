@@ -3,6 +3,12 @@
 #include "parser.hh"
 #include "scanner.hh"
 #include "codestatistics.hh"
+#include <iostream>
+#include <string>
+#include <sstream>
+#include <vector>
+#include <cctype>
+#include <algorithm>
 
 /*  Defines some macros to update locations */
 #define STEP()			yylloc->step();
@@ -19,6 +25,14 @@ typedef c3ms::CodeParser::token_type token_type;
 
 // Import enum IDType from CodeStatistics
 typedef c3ms::CodeStatistics::StatsCategory SC;
+
+// Advice of the use of external class named CodeStatistics
+typedef c3ms::CodeStatistics CodeStatistics;
+
+void trimSpaces(std::string& str);
+void extractVariableNames(const std::string& arg, CodeStatistics& stat);
+void processFunction(const std::string& functionString, CodeStatistics& stat);
+void processArguments(const std::string& args, CodeStatistics& stat);
 
 %}
 
@@ -370,6 +384,7 @@ L?\"(\\.|[^\\"])*\"								{stats.category(SC::CONSTANT,yytext);/*STRING_LITERAL
   /***************** Function Call Handling *****************/
 [a-zA-Z_][a-zA-Z0-9_]*\s*\(([^)]|\s*\([^\)]*\))*\) {
   printf("function: %s\n", yytext);
+  processFunction(yytext, stats);
 }
 
   /***************** Identifier Handling *****************/
@@ -384,6 +399,92 @@ L?\"(\\.|[^\\"])*\"								{stats.category(SC::CONSTANT,yytext);/*STRING_LITERAL
 }
 
 %%
+
+void trimSpaces(std::string& str) {
+    str.erase(str.begin(), std::find_if(str.begin(), str.end(), [](unsigned char ch) {
+        return !std::isspace(ch);
+    }));
+    str.erase(std::find_if(str.rbegin(), str.rend(), [](unsigned char ch) {
+        return !std::isspace(ch);
+    }).base(), str.end());
+}
+
+void extractVariableNames(const std::string& arg, CodeStatistics& stat) {
+    std::istringstream iss(arg);
+    std::string token;
+    std::vector<std::string> tokens;
+
+    while (iss >> token) {
+        tokens.push_back(token);
+    }
+
+    // Lógica para analizar los tokens
+    if (tokens.size() == 3) {;
+		stat.category(SC::TYPE, tokens[0]);
+		stat.category(SC::TYPE, tokens[1]);
+		stat.category(SC::IDENTIFIER, tokens[2]);
+    } else if (tokens.size() == 2) {
+		stat.category(SC::TYPE, tokens[0]);
+		stat.category(SC::IDENTIFIER, tokens[1]);
+    } else if (tokens.size() == 1) {
+		stat.category(SC::IDENTIFIER, tokens[0]);
+    }
+}
+
+void processFunction(const std::string& functionString, CodeStatistics& stat) {
+    std::string buffer = functionString;
+    std::replace(buffer.begin(), buffer.end(), '\n', ' ');
+    std::replace(buffer.begin(), buffer.end(), '\t', ' ');
+
+    size_t openParen = buffer.find('(');
+    size_t closeParen = buffer.rfind(')');
+
+    if (openParen != std::string::npos && closeParen != std::string::npos && openParen < closeParen) {
+        std::string name = buffer.substr(0, openParen);
+        trimSpaces(name);
+        stat.category(SC::APIFUNCTION, name);
+
+        std::string args = buffer.substr(openParen + 1, closeParen - openParen - 1);
+
+        if (!args.empty()) {
+            processArguments(args, stat);
+        }
+    }
+}
+
+void processArguments(const std::string& args, CodeStatistics& stat) {
+    int nestedFunctionCount = 0;
+    size_t start = 0;
+
+    for (size_t i = 0; i < args.size(); ++i) {
+        if (args[i] == '(') {
+            nestedFunctionCount++;
+        } else if (args[i] == ')') {
+            nestedFunctionCount--;
+        } else if (args[i] == ',' && nestedFunctionCount == 0) {
+            std::string arg = args.substr(start, i - start);
+            trimSpaces(arg);
+
+            if (arg.find('(') != std::string::npos) {
+                processFunction(arg, stat);
+            } else {
+                extractVariableNames(arg, stat);
+            }
+            start = i + 1;
+        }
+    }
+
+    if (start < args.size()) {
+        std::string arg = args.substr(start);
+        trimSpaces(arg);
+
+        if (arg.find('(') != std::string::npos) {
+            processFunction(arg, stat);
+        } else {
+            extractVariableNames(arg, stat);
+        }
+    }
+}
 
 
 /*
