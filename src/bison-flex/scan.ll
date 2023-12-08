@@ -45,6 +45,7 @@ void processArguments(const std::string& args, CodeStatistics& stat);
 %option batch
 %option prefix="c3ms"
 %x comment
+%x LAMBDA
 %s includestate
 
 /*
@@ -61,8 +62,13 @@ H								[a-fA-F0-9]
 E								[Ee][+-]?{D}+
 FS								(f|F|l|L)
 IS								(u|U|l|L)*
-SYCL_parallel_for				\w+\.parallel_for<.*?>\(.*?\).*\)|\w+\.parallel_for\(.*?\)
 
+/* Abbreviations for SYCL */
+SYCL_parallel_for				[a-zA-Z_][a-zA-Z0-9_]*\s*\.\s*parallel_for\s*(<[^>]*>)?\s*\([^)]*\)
+SYCL_submit             		\.submit\s*\(\s*\[.*\]\s*,\s*[^)]*\)
+
+/* Abbreviations for oneTBB */
+oneTBB_parallel_for				parallel_for\s*(<[^>]*>)?\s*\([^)]*\)
 %%
 
  /* The rules. */
@@ -188,7 +194,7 @@ std::get										{stats.category(SC::OPERATOR,yytext);}
 std::tuple										{stats.category(SC::TYPE,yytext);}
 
   /***************** oneTBB Specific Keywords and Types *****************/
-"parallel_for"									{stats.category(SC::KEYWORD,yytext);stats.addCondition();}
+{oneTBB_parallel_for}							{stats.category(SC::KEYWORD,yytext);stats.addCondition();printf("oneTBB_parallel_for\n");}
 "parallel_reduce"								{stats.category(SC::KEYWORD,yytext);stats.addCondition();}
 "parallel_scan"									{stats.category(SC::KEYWORD,yytext);stats.addCondition();}
 "parallel_pipeline"								{stats.category(SC::KEYWORD,yytext);stats.addCondition();}
@@ -263,17 +269,8 @@ std::tuple										{stats.category(SC::TYPE,yytext);}
 "tbb::flow::unlimited"							{stats.category(SC::KEYWORD,yytext);}
 
   /***************** AVX Specific Types and Functions *****************/
-__m256											{stats.category(SC::TYPE,yytext);}
-__m256d											{stats.category(SC::TYPE,yytext);}
-__m256i											{stats.category(SC::TYPE,yytext);}
-_mm256_											{stats.category(SC::KEYWORD,yytext);}
-_mm256_add_										{stats.category(SC::KEYWORD,yytext);}
-_mm256_sub_										{stats.category(SC::KEYWORD,yytext);}
-_mm256_mul_										{stats.category(SC::KEYWORD,yytext);}
-_mm256_div_										{stats.category(SC::KEYWORD,yytext);}
-_mm256_and_										{stats.category(SC::KEYWORD,yytext);}
-_mm256_load_									{stats.category(SC::KEYWORD,yytext);}
-_mm256_store_									{stats.category(SC::KEYWORD,yytext);}
+__m(128|256|512)[di]?							{stats.category(SC::APIFUNCTION,yytext);}
+_mm(128|256|512)?_[a-zA-Z0-9_]+					{stats.category(SC::APIFUNCTION,yytext);}
 
   /***************** SIMD Specific Types and Functions *****************/
 simd_t											{stats.category(SC::TYPE,yytext);}
@@ -312,7 +309,7 @@ element_aligned									{stats.category(SC::KEYWORD,yytext);}
 "get_global_id"									{stats.category(SC::APIFUNCTION,yytext);}
 "get_local_id"									{stats.category(SC::APIFUNCTION,yytext);}
 "barrier"										{stats.category(SC::APIFUNCTION,yytext);}
-"submit"										{stats.category(SC::APIFUNCTION,yytext);}
+{SYCL_submit}									{stats.category(SC::APIFUNCTION,yytext);printf("SYCL_submit\n");}
 "depends_on"									{stats.category(SC::APIFUNCTION,yytext);}
 "sycl::mad"										{stats.category(SC::APIFUNCTION,yytext);}
 "parallel_for<>"								{stats.category(SC::APIFUNCTION,yytext);stats.addCondition();}
@@ -382,10 +379,11 @@ L?'(\\.|[^\\'])+'								{stats.category(SC::CONSTANT,yytext);}
 L?\"(\\.|[^\\"])*\"								{stats.category(SC::CONSTANT,yytext);/*STRING_LITERAL*/}
 
   /***************** Function Call Handling *****************/
-[a-zA-Z_][a-zA-Z0-9_]*\s*\(([^)]|\s*\([^\)]*\))*\) {
-  printf("function: %s\n", yytext);
-  processFunction(yytext, stats);
-}
+
+	/* [a-zA-Z_][a-zA-Z0-9_]*\s*\(([^)]|\s*\([^\)]*\))*\) {
+		printf("function: %s\n", yytext);
+		processFunction(yytext, stats);
+	} */
 
   /***************** Identifier Handling *****************/
 {L}({L}|{D})*									{stats.category(SC::IDENTIFIER,yytext);}
