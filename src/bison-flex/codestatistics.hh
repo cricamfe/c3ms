@@ -21,8 +21,9 @@ namespace c3ms
     class CodeStatistics
     {
         public:
+            enum class StatsCategory;
             using StatSize = std::size_t;
-            using CSSet = std::unordered_map<std::string, StatSize>;
+            using CSSet = std::unordered_map<std::string, std::pair<StatSize, StatsCategory>>;
 
             /**
              * @brief Enum class representing different categories for code statistics.
@@ -83,6 +84,7 @@ namespace c3ms
             // Private Member Functions
             StatSize& getCounterReference(StatsCategory counter);
             CSSet& getCSSetReference(StatsCategory set);
+            std::string toString(StatsCategory category) const;
 
             // Member Variables
             std::shared_ptr<CodeScanner> scanner_;

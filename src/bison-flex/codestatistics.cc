@@ -37,9 +37,9 @@ namespace c3ms
     void CodeStatistics::category(StatsCategory counter, std::string_view p) {
         getCounterReference(counter)++;
         auto& setRef = getCSSetReference(counter);
-        auto [it, inserted] = setRef.insert({std::string(p), 1});
+        auto [it, inserted] = setRef.insert({std::string(p), {1, counter}});
         if (!inserted) {
-            it->second++;
+            it->second.first++;
         }
     }
 
@@ -120,7 +120,8 @@ namespace c3ms
     void CodeStatistics::printMetrics(std::ostringstream& result, const CSSet& set, const int nameWidth, const int valueWidth) const {
         for (const auto& element : set) {
             result << std::left << std::setw(nameWidth) << element.first << " " 
-                << std::right << std::setw(valueWidth) << element.second << '\n';
+                << std::right << std::setw(valueWidth) << element.second.first
+                << " (" << toString(element.second.second) << ")\n";
         }
     }
 
@@ -220,15 +221,24 @@ namespace c3ms
         nAPIFunctions_ += rhs.nAPIFunctions_;
         nCustomFunctions_ += rhs.nCustomFunctions_;
 
-        typesSet_.insert(rhs.typesSet_.begin(), rhs.typesSet_.end());
-        constantsSet_.insert(rhs.constantsSet_.begin(), rhs.constantsSet_.end());
-        identifiersSet_.insert(rhs.identifiersSet_.begin(), rhs.identifiersSet_.end());
-        cSpecifiersSet_.insert(rhs.cSpecifiersSet_.begin(), rhs.cSpecifiersSet_.end());
-        keywordsSet_.insert(rhs.keywordsSet_.begin(), rhs.keywordsSet_.end());
-        operatorsSet_.insert(rhs.operatorsSet_.begin(), rhs.operatorsSet_.end());
-        conditionsSet_.insert(rhs.conditionsSet_.begin(), rhs.conditionsSet_.end());
-        apiFunctionsSet_.insert(rhs.apiFunctionsSet_.begin(), rhs.apiFunctionsSet_.end());
-        customFunctionsSet_.insert(rhs.customFunctionsSet_.begin(), rhs.customFunctionsSet_.end());
+        auto combineCSSets = [](CSSet& lhsSet, const CSSet& rhsSet) {
+            for (const auto& element : rhsSet) {
+                auto [it, inserted] = lhsSet.insert({element.first, {element.second.first, element.second.second}});
+                if (!inserted) {
+                    it->second.first += element.second.first;
+                }
+            }
+        };
+
+        combineCSSets(typesSet_, rhs.typesSet_);
+        combineCSSets(constantsSet_, rhs.constantsSet_);
+        combineCSSets(identifiersSet_, rhs.identifiersSet_);
+        combineCSSets(cSpecifiersSet_, rhs.cSpecifiersSet_);
+        combineCSSets(keywordsSet_, rhs.keywordsSet_);
+        combineCSSets(operatorsSet_, rhs.operatorsSet_);
+        combineCSSets(conditionsSet_, rhs.conditionsSet_);
+        combineCSSets(apiFunctionsSet_, rhs.apiFunctionsSet_);
+        combineCSSets(customFunctionsSet_, rhs.customFunctionsSet_);
 
         return *this;
     }
@@ -265,6 +275,21 @@ namespace c3ms
             case StatsCategory::APIFUNCTION: return apiFunctionsSet_;
             case StatsCategory::CUSTOMFUNCTION: return customFunctionsSet_;
             default: throw std::invalid_argument("Unknown CSSet type");
+        }
+    }
+
+    std::string CodeStatistics::toString(StatsCategory category) const {
+        switch (category) {
+            case StatsCategory::TYPE: return "Type";
+            case StatsCategory::CONSTANT: return "Constant";
+            case StatsCategory::IDENTIFIER: return "Identifier";
+            case StatsCategory::CSPECIFIER: return "C Specifier";
+            case StatsCategory::KEYWORD: return "Keyword";
+            case StatsCategory::OPERATOR: return "Operator";
+            case StatsCategory::CONDITION: return "Condition";
+            case StatsCategory::APIFUNCTION: return "API Function";
+            case StatsCategory::CUSTOMFUNCTION: return "Custom Function";
+            default: return "Unknown";
         }
     }
 }
