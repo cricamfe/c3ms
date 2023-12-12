@@ -30,9 +30,6 @@ typedef c3ms::CodeStatistics::StatsCategory SC;
 typedef c3ms::CodeStatistics CodeStatistics;
 
 void trimSpaces(std::string& str);
-void extractVariableNames(const std::string& arg, CodeStatistics& stat);
-void processFunction(const std::string& functionString, CodeStatistics& stat);
-void processArguments(const std::string& args, CodeStatistics& stat);
 
 %}
 
@@ -67,11 +64,14 @@ IS								(u|U|l|L)*
 SYCL_namespace          		sycl::
 SYCL_parallel_for				[a-zA-Z_][a-zA-Z0-9_]*\s*\.\s*parallel_for\s*
 SYCL_submit             		\.submit\s*\(\s*
-SYCL_combined					{SYCL_namespace}[a-zA-Z_][a-zA-Z0-9_]*(\s*<\s*[a-zA-Z0-9_]+(\s*,\s*[a-zA-Z0-9_]+)*\s*>)?(\s*::\s*[a-zA-Z_][a-zA-Z0-9_]*)*(\(\))?
+SYCL_combined					sycl::[a-zA-Z_][a-zA-Z0-9_]*(\s*<\s*[a-zA-Z0-9_]+(\s*,\s*[a-zA-Z0-9_]+)*\s*>)?(\s*::\s*[a-zA-Z_][a-zA-Z0-9_]*)*(\(\))?
 
 
 /* Abbreviations for oneTBB */
-oneTBB_parallel_for				parallel_for\s*(<[^>]*>)?\s*\([^)]*\)
+oneTBB_prefix					((oneapi::tbb::)|(tbb::))?
+oneTBB_flow_prefix				{oneTBB_prefix}flow::
+oneTBB_filter_mode				{oneTBB_prefix}filter_mode::
+oneTBB_parallel_for				parallel_for
 %%
 
  /* The rules. */
@@ -91,20 +91,66 @@ oneTBB_parallel_for				parallel_for\s*(<[^>]*>)?\s*\([^)]*\)
 <comment>\n										{ParserLineno++;}
 <comment>"*"+"/"								{BEGIN(INITIAL);}
 
+  /***************** C++ Print Handling (Ignore) *****************/
+printf[\t ]*\( {
+    // Ignorar todo dentro de los paréntesis de printf hasta llegar al cierre del paréntesis
+    int paren_count = 1;
+    while (paren_count > 0) {
+        char next_char = yyinput();
+        if (next_char == '(') {
+            ++paren_count;
+        } else if (next_char == ')') {
+            --paren_count;
+        }
+    }
+}
+
   /***************** Preprocessor Directives *****************/
 
-\#[\t ]*define									{stats.category(SC::KEYWORD,yytext);}
-\#[\t ]*else									{stats.category(SC::KEYWORD,yytext);}
-\#[\t ]*endif									{/*nothing*/}
-\#[\t ]*if										{stats.category(SC::KEYWORD,yytext);stats.addCondition();}
-\#[\t ]*ifdef									{stats.category(SC::KEYWORD,yytext);stats.addCondition();}
-\#[\t ]*ifndef									{stats.category(SC::KEYWORD,yytext);stats.addCondition();}
-\#[\t ]*include									{stats.category(SC::KEYWORD,yytext);BEGIN(includestate);}
-\#[\t ]*pragma									{stats.category(SC::KEYWORD,yytext);}
-\#[\t ]*line.*									{ }
+"#"[ \t]*"define"                                { stats.category(SC::KEYWORD, "define"); }
+"#"[ \t]*"else"                                  { stats.category(SC::KEYWORD, "else"); }
+"#"[ \t]*"endif"                                 { stats.category(SC::KEYWORD, "endif"); }
+"#"[ \t]*"if"                                    { stats.category(SC::KEYWORD, "if"); stats.addCondition(); }
+"#"[ \t]*"ifdef"                                 { stats.category(SC::KEYWORD, "ifdef"); stats.addCondition(); }
+"#"[ \t]*"ifndef"                                { stats.category(SC::KEYWORD, "ifndef"); stats.addCondition(); }
+"#"[ \t]*"pragma"                                { stats.category(SC::KEYWORD, "pragma"); }
+"#"[ \t]*"line".*                                { /* nothing */ }
+"#"[ \t]*"include"[ \t]*     					 { stats.category(SC::KEYWORD, "include"); BEGIN(includestate); }
+"if constexpr"[\t ]* {
+    // Captura el contenido dentro de los paréntesis de if constexpr
+    char next_char;
+    std::string content;
+    int paren_count = 1;
+    yyinput(); // Consume el primer '('
+    while (paren_count > 0) {
+        next_char = yyinput();
+        if (next_char == '(') {
+            ++paren_count;
+        } else if (next_char == ')') {
+            --paren_count;
+        }
+        if (paren_count > 0) {
+            content += next_char;
+        }
+    }
+	// Categoriza la keyword y el contenido
+	stats.category(SC::KEYWORD, "if constexpr");
+    stats.category(SC::CUSTOMCONSTANT, content.c_str());
+}
 
-<includestate>\<								{/* do not count as operator */}
-<includestate>\>								{/* do not count as operator */}
+
+
+<includestate>[<"]([^>"]+)[>"]	{
+    // Extrae el contenido entre < > o " "
+    std::string included_file = yytext;
+    included_file = included_file.substr(included_file.find_first_of("<\"") + 1);
+    included_file = included_file.substr(0, included_file.find_last_of(">\""));
+    trimSpaces(included_file);
+
+    // Categoriza el texto extraído y vuelve al estado inicial
+    stats.category(SC::CONSTANT, included_file);
+    BEGIN(INITIAL);
+}
 
   /***************** C++ Comment Handling *****************/
 
@@ -121,6 +167,7 @@ short											{stats.category(SC::TYPE,yytext);}
 signed											{stats.category(SC::TYPE,yytext);}
 unsigned										{stats.category(SC::TYPE,yytext);}
 void											{stats.category(SC::TYPE,yytext);}
+size_t											{stats.category(SC::TYPE,yytext);}
 auto											{stats.category(SC::CSPECIFIER,yytext);}
 extern											{stats.category(SC::CSPECIFIER,yytext);}
 register										{stats.category(SC::CSPECIFIER,yytext);}
@@ -140,10 +187,93 @@ goto											{stats.category(SC::KEYWORD,yytext);}
 if												{stats.category(SC::KEYWORD,yytext);stats.addCondition();stats.decOperator();}
 return											{stats.category(SC::KEYWORD,yytext);}
 sizeof											{stats.category(SC::KEYWORD,yytext);}
+malloc											{stats.category(SC::KEYWORD,yytext);}
+free											{stats.category(SC::KEYWORD,yytext);}
+empty                       					{stats.category(SC::KEYWORD,yytext); /* Vector or Array */}
 struct											{stats.category(SC::KEYWORD,yytext);}
 switch											{stats.category(SC::KEYWORD,yytext);stats.decOperator();}
 union											{stats.category(SC::KEYWORD,yytext);}
 while											{stats.category(SC::KEYWORD,yytext);stats.decOperator();}
+max												{stats.category(SC::KEYWORD,yytext);}
+min												{stats.category(SC::KEYWORD,yytext);}
+main											{stats.category(SC::KEYWORD,yytext);}
+
+  /***************** C++ Math Functions *****************/
+fabs											{stats.category(SC::KEYWORD,yytext);}
+abs												{stats.category(SC::KEYWORD,yytext);}
+acos											{stats.category(SC::KEYWORD,yytext);}
+asin											{stats.category(SC::KEYWORD,yytext);}
+atan											{stats.category(SC::KEYWORD,yytext);}
+atan2											{stats.category(SC::KEYWORD,yytext);}
+ceil											{stats.category(SC::KEYWORD,yytext);}
+cos												{stats.category(SC::KEYWORD,yytext);}
+cosh											{stats.category(SC::KEYWORD,yytext);}
+exp												{stats.category(SC::KEYWORD,yytext);}
+floor											{stats.category(SC::KEYWORD,yytext);}
+fmod											{stats.category(SC::KEYWORD,yytext);}
+frexp											{stats.category(SC::KEYWORD,yytext);}
+ldexp											{stats.category(SC::KEYWORD,yytext);}
+log												{stats.category(SC::KEYWORD,yytext);}
+log2											{stats.category(SC::KEYWORD,yytext);}
+log10											{stats.category(SC::KEYWORD,yytext);}
+modf											{stats.category(SC::KEYWORD,yytext);}
+pow												{stats.category(SC::KEYWORD,yytext);}
+sin												{stats.category(SC::KEYWORD,yytext);}
+sinh											{stats.category(SC::KEYWORD,yytext);}
+sqrt											{stats.category(SC::KEYWORD,yytext);}
+tan												{stats.category(SC::KEYWORD,yytext);}
+tanh											{stats.category(SC::KEYWORD,yytext);}
+acosf											{stats.category(SC::KEYWORD,yytext);}
+asinf											{stats.category(SC::KEYWORD,yytext);}
+atanf											{stats.category(SC::KEYWORD,yytext);}
+atan2f											{stats.category(SC::KEYWORD,yytext);}
+cosf											{stats.category(SC::KEYWORD,yytext);}
+coshf											{stats.category(SC::KEYWORD,yytext);}
+expf											{stats.category(SC::KEYWORD,yytext);}
+expm1											{stats.category(SC::KEYWORD,yytext);}
+expm1f											{stats.category(SC::KEYWORD,yytext);}
+fabsf											{stats.category(SC::KEYWORD,yytext);}
+fma												{stats.category(SC::KEYWORD,yytext);}
+fmaf											{stats.category(SC::KEYWORD,yytext);}
+hypot											{stats.category(SC::KEYWORD,yytext);}
+hypotf											{stats.category(SC::KEYWORD,yytext);}
+logf											{stats.category(SC::KEYWORD,yytext);}
+log1p											{stats.category(SC::KEYWORD,yytext);}
+log1pf											{stats.category(SC::KEYWORD,yytext);}
+logb											{stats.category(SC::KEYWORD,yytext);}
+logbf											{stats.category(SC::KEYWORD,yytext);}
+nextafter										{stats.category(SC::KEYWORD,yytext);}
+nextafterf										{stats.category(SC::KEYWORD,yytext);}
+powf											{stats.category(SC::KEYWORD,yytext);}
+remainder										{stats.category(SC::KEYWORD,yytext);}
+remainderf										{stats.category(SC::KEYWORD,yytext);}
+rint											{stats.category(SC::KEYWORD,yytext);}
+rintf											{stats.category(SC::KEYWORD,yytext);}
+sinf											{stats.category(SC::KEYWORD,yytext);}
+sinhf											{stats.category(SC::KEYWORD,yytext);}
+sqrtf											{stats.category(SC::KEYWORD,yytext);}
+tanf											{stats.category(SC::KEYWORD,yytext);}
+tanhf											{stats.category(SC::KEYWORD,yytext);}
+trunc											{stats.category(SC::KEYWORD,yytext);}
+truncf											{stats.category(SC::KEYWORD,yytext);}
+fpclassify										{stats.category(SC::CONSTANT,yytext);}
+isfinite										{stats.category(SC::CONSTANT,yytext);}
+isinf											{stats.category(SC::CONSTANT,yytext);}
+isnan											{stats.category(SC::CONSTANT,yytext);}
+isnormal										{stats.category(SC::CONSTANT,yytext);}
+signbit											{stats.category(SC::CONSTANT,yytext);}
+isgreater										{stats.category(SC::CONSTANT,yytext);}
+isgreaterequal									{stats.category(SC::CONSTANT,yytext);}
+isless											{stats.category(SC::CONSTANT,yytext);}
+islessequal										{stats.category(SC::CONSTANT,yytext);}
+islessgreater									{stats.category(SC::CONSTANT,yytext);}
+isunordered										{stats.category(SC::CONSTANT,yytext);}
+math_errhandling								{stats.category(SC::CONSTANT,yytext);}
+INFINITY										{stats.category(SC::CONSTANT,yytext);}
+NAN												{stats.category(SC::CONSTANT,yytext);}
+HUGE_VAL										{stats.category(SC::CONSTANT,yytext);}
+HUGE_VALF										{stats.category(SC::CONSTANT,yytext);}
+HUGE_VALL										{stats.category(SC::CONSTANT,yytext);}
 
   /***************** C++ Specific Keywords and Types *****************/
 
@@ -178,7 +308,24 @@ typeid											{stats.category(SC::KEYWORD,yytext);}
 typename										{stats.category(SC::KEYWORD,yytext);}
 using											{stats.category(SC::KEYWORD,yytext);}
 asm												{printf("asmisunsupported\n");}
-"std::vector"|"vector"    						{stats.category(SC::TYPE,yytext);}
+vector    										{stats.category(SC::TYPE,yytext);}
+"template"[\t ]*"<"[\t ]*[a-zA-Z_][a-zA-Z0-9_]*[\t ]+[a-zA-Z_][a-zA-Z0-9_]*[\t ]*">" {
+    char *token;
+    // Add the keyword "template"
+	stats.category(SC::KEYWORD, "template");
+    token = strtok(yytext, " \t<>");
+	// Generics type, for example "typename" or "size_t"
+    token = strtok(NULL, " \t<>");
+    if (token) {
+        stats.category(SC::TYPE, token);
+    }
+	// Add the parameter name
+    token = strtok(NULL, " \t<>");
+    if (token) {
+        stats.category(SC::IDENTIFIER, token);
+    }
+}
+
 
   /***************** C++14, C++17, C++20 Specific Features *****************/
 alignas											{stats.category(SC::KEYWORD,yytext);}
@@ -194,110 +341,115 @@ co_await										{stats.category(SC::KEYWORD,yytext);}
 co_return										{stats.category(SC::KEYWORD,yytext);}
 co_yield										{stats.category(SC::KEYWORD,yytext);}
 requires										{stats.category(SC::KEYWORD,yytext);}
-std::get										{stats.category(SC::OPERATOR,yytext);}
-"tuple"|"std:tuple"								{stats.category(SC::TYPE,yytext);}
-"pair"|"std::pair"								{stats.category(SC::TYPE,yytext);}
+get												{stats.category(SC::KEYWORD,yytext);}
+tuple											{stats.category(SC::TYPE,yytext);}
+pair											{stats.category(SC::TYPE,yytext);}
 std::[a-zA-Z_][a-zA-Z0-9_]*\s*\( 				{
 	// Remove the open parenthesis
 	std::string buffer = yytext;
 	buffer.erase(buffer.size() - 1);
-	stats.category(SC::APIFUNCTION, buffer);
+	stats.category(SC::KEYWORD, buffer);
 	stats.category(SC::OPERATOR, "(");
 	// Print buffer
 	printf("%s\n", buffer.c_str());
 }
 
   /***************** oneTBB Specific Keywords and Types *****************/
-{oneTBB_parallel_for}							{stats.category(SC::KEYWORD,yytext);stats.addCondition();printf("oneTBB_parallel_for\n");}
-"parallel_reduce"								{stats.category(SC::KEYWORD,yytext);stats.addCondition();}
-"parallel_scan"									{stats.category(SC::KEYWORD,yytext);stats.addCondition();}
-"parallel_pipeline"								{stats.category(SC::KEYWORD,yytext);stats.addCondition();}
-"flow_graph"									{stats.category(SC::KEYWORD,yytext);}
-"global_control"								{stats.category(SC::KEYWORD,yytext);}
-"task_group"									{stats.category(SC::KEYWORD,yytext);}
-"task_arena"									{stats.category(SC::KEYWORD,yytext);}
-"blocked_range"									{stats.category(SC::TYPE,yytext);}
-"blocked_range2d"								{stats.category(SC::TYPE,yytext);}
-"blocked_range3d"								{stats.category(SC::TYPE,yytext);}	
-"concurrent_vector"								{stats.category(SC::TYPE,yytext);}
-"concurrent_queue"								{stats.category(SC::TYPE,yytext);}
-"concurrent_bounded_queue"						{stats.category(SC::TYPE,yytext);}
-"concurrent_priority_queue"						{stats.category(SC::TYPE,yytext);}
-"concurrent_hash_map"							{stats.category(SC::TYPE,yytext);}
-"concurrent_unordered_map"						{stats.category(SC::TYPE,yytext);}
-"concurrent_unordered_set"						{stats.category(SC::TYPE,yytext);}
-"combinable"									{stats.category(SC::TYPE,yytext);}
-"enumerable_thread_specific"					{stats.category(SC::TYPE,yytext);}
-"strict_ppl"									{stats.category(SC::KEYWORD,yytext);}
-"tick_count"									{stats.category(SC::TYPE,yytext);}
+{oneTBB_parallel_for}							{stats.category(SC::APIKEYWORD,yytext);}
+{oneTBB_prefix}parallel_reduce					{stats.category(SC::APIKEYWORD,yytext);}
+{oneTBB_prefix}parallel_scan					{stats.category(SC::APIKEYWORD,yytext);}
+{oneTBB_prefix}parallel_pipeline				{stats.category(SC::APIKEYWORD,yytext);}
+{oneTBB_prefix}flow_graph						{stats.category(SC::APIKEYWORD,yytext);}
+{oneTBB_prefix}task_group						{stats.category(SC::APIKEYWORD,yytext);}
+{oneTBB_prefix}task_arena						{stats.category(SC::APIKEYWORD,yytext);}
+{oneTBB_prefix}blocked_range					{stats.category(SC::APITYPE,yytext);}
+{oneTBB_prefix}blocked_range2d					{stats.category(SC::APITYPE,yytext);}
+{oneTBB_prefix}blocked_range3d					{stats.category(SC::APITYPE,yytext);}	
+{oneTBB_prefix}concurrent_vector				{stats.category(SC::APITYPE,yytext);}
+{oneTBB_prefix}concurrent_queue					{stats.category(SC::APITYPE,yytext);}
+{oneTBB_prefix}concurrent_bounded_queue			{stats.category(SC::APITYPE,yytext);}
+{oneTBB_prefix}concurrent_priority_queue		{stats.category(SC::APITYPE,yytext);}
+{oneTBB_prefix}concurrent_hash_map				{stats.category(SC::APITYPE,yytext);}
+{oneTBB_prefix}concurrent_unordered_map			{stats.category(SC::APITYPE,yytext);}
+{oneTBB_prefix}concurrent_unordered_set			{stats.category(SC::APITYPE,yytext);}
+{oneTBB_prefix}combinable						{stats.category(SC::APITYPE,yytext);}
+{oneTBB_prefix}enumerable_thread_specific		{stats.category(SC::APITYPE,yytext);}
+{oneTBB_prefix}global_control::max_allowed_parallelism	{stats.category(SC::APICONSTANT,yytext);}
 
   /***************** oneTBB Synchronization and Functions *****************/
-"atomic"										{stats.category(SC::TYPE,yytext);}
-"mutex"											{stats.category(SC::TYPE,yytext);}
-"spin_mutex"									{stats.category(SC::TYPE,yytext);}
-"recursive_mutex"								{stats.category(SC::TYPE,yytext);}
-"queuing_mutex"									{stats.category(SC::TYPE,yytext);}
-"spin_rw_mutex"									{stats.category(SC::TYPE,yytext);}
-"queuing_rw_mutex"								{stats.category(SC::TYPE,yytext);}
-"reader_writer_lock"							{stats.category(SC::TYPE,yytext);}
+{oneTBB_prefix}spin_mutex						{stats.category(SC::APIKEYWORD,yytext);}
+{oneTBB_prefix}recursive_mutex					{stats.category(SC::APIKEYWORD,yytext);}
+{oneTBB_prefix}queuing_mutex					{stats.category(SC::APIKEYWORD,yytext);}
+{oneTBB_prefix}spin_rw_mutex					{stats.category(SC::APIKEYWORD,yytext);}
+{oneTBB_prefix}queuing_rw_mutex					{stats.category(SC::APIKEYWORD,yytext);}
+{oneTBB_prefix}reader_writer_lock				{stats.category(SC::APIKEYWORD,yytext);}
 
   /***************** oneTBB Parallel Pipeline and Task Graph Creation *****************/
-"make_filter"									{stats.category(SC::KEYWORD,yytext);}
-"tbb::filter_mode::parallel"					{stats.category(SC::KEYWORD,yytext);}
-"tbb::filter_mode::serial_out_of_order"			{stats.category(SC::KEYWORD,yytext);}
-"tbb::flow::make_edge"							{stats.category(SC::KEYWORD,yytext);}
-"tbb::flow::input_port"							{stats.category(SC::KEYWORD,yytext);}
-"tbb::flow::output_port"						{stats.category(SC::KEYWORD,yytext);}
-"tbb::flow::remove_edge"						{stats.category(SC::KEYWORD,yytext);stats.decOperator();}
-"tbb::flow::continue_node"						{stats.category(SC::TYPE,yytext);}
-"tbb::flow::function_node"						{stats.category(SC::TYPE,yytext);}
-"tbb::flow::broadcast_node"						{stats.category(SC::TYPE,yytext);}
-"tbb::flow::join_node"							{stats.category(SC::TYPE,yytext);}
-"tbb::flow::split_node"							{stats.category(SC::TYPE,yytext);}
-"tbb::flow::overwrite_node"						{stats.category(SC::TYPE,yytext);}
-"tbb::flow::write_once_node"					{stats.category(SC::TYPE,yytext);}
-"tbb::flow::sequencer_node"						{stats.category(SC::TYPE,yytext);}
-"tbb::flow::limiter_node"						{stats.category(SC::TYPE,yytext);}
-"tbb::flow::source_node"						{stats.category(SC::TYPE,yytext);}
-"tbb::flow::priority_queue_node"				{stats.category(SC::TYPE,yytext);}
-"tbb::flow::buffer_node"						{stats.category(SC::TYPE,yytext);}
-"tbb::flow::async_node"							{stats.category(SC::TYPE,yytext);}
-"tbb::flow::indexer_node"						{stats.category(SC::TYPE,yytext);}
-"tbb::flow::input_node"							{stats.category(SC::TYPE,yytext);}
-"tbb::flow::output_node"						{stats.category(SC::TYPE,yytext);}
-"tbb::flow::multifunction_node"					{stats.category(SC::TYPE,yytext);}
-"tbb::flow::graph"								{stats.category(SC::TYPE,yytext);}
+make_filter										{stats.category(SC::APIKEYWORD,yytext);}
+{oneTBB_filter_mode}parallel					{stats.category(SC::APIKEYWORD,yytext);}
+{oneTBB_filter_mode}serial_out_of_order			{stats.category(SC::APIKEYWORD,yytext);}
+{oneTBB_flow_prefix}make_edge					{stats.category(SC::APIKEYWORD,yytext);}
+{oneTBB_flow_prefix}input_port					{stats.category(SC::APIKEYWORD,yytext);}
+{oneTBB_flow_prefix}output_port					{stats.category(SC::APIKEYWORD,yytext);}
+{oneTBB_flow_prefix}remove_edge					{stats.category(SC::APIKEYWORD,yytext);}
+{oneTBB_flow_prefix}continue_node				{stats.category(SC::APITYPE,yytext);}
+{oneTBB_flow_prefix}function_node				{stats.category(SC::APITYPE,yytext);}
+{oneTBB_flow_prefix}broadcast_node				{stats.category(SC::APITYPE,yytext);}
+{oneTBB_flow_prefix}join_node					{stats.category(SC::APITYPE,yytext);}
+{oneTBB_flow_prefix}split_node					{stats.category(SC::APITYPE,yytext);}
+{oneTBB_flow_prefix}overwrite_node				{stats.category(SC::APITYPE,yytext);}
+{oneTBB_flow_prefix}write_once_node				{stats.category(SC::APITYPE,yytext);}
+{oneTBB_flow_prefix}sequencer_node				{stats.category(SC::APITYPE,yytext);}
+{oneTBB_flow_prefix}limiter_node				{stats.category(SC::APITYPE,yytext);}
+{oneTBB_flow_prefix}source_node					{stats.category(SC::APITYPE,yytext);}
+{oneTBB_flow_prefix}priority_queue_node			{stats.category(SC::APITYPE,yytext);}
+{oneTBB_flow_prefix}buffer_node					{stats.category(SC::APITYPE,yytext);}
+{oneTBB_flow_prefix}async_node					{stats.category(SC::APITYPE,yytext);}
+{oneTBB_flow_prefix}indexer_node				{stats.category(SC::APITYPE,yytext);}
+{oneTBB_flow_prefix}input_node					{stats.category(SC::APITYPE,yytext);}
+{oneTBB_flow_prefix}output_node					{stats.category(SC::APITYPE,yytext);}
+{oneTBB_flow_prefix}multifunction_node			{stats.category(SC::APITYPE,yytext);}
+{oneTBB_flow_prefix}graph						{stats.category(SC::APITYPE,yytext);}
 
   /****************** oneTBB Parallel Algorithms *****************/
-"parallel_invoke"								{stats.category(SC::KEYWORD,yytext);stats.addCondition();}
-"parallel_do"									{stats.category(SC::KEYWORD,yytext);stats.addCondition();}
-"parallel_sort"									{stats.category(SC::KEYWORD,yytext);stats.addCondition();}
-"parallel_for_each"								{stats.category(SC::KEYWORD,yytext);stats.addCondition();}
-"enqueue"										{stats.category(SC::KEYWORD,yytext);}
-"execute"										{stats.category(SC::KEYWORD,yytext);}
-"wait_for_all"									{stats.category(SC::KEYWORD,yytext);}
-"reserve_wait"									{stats.category(SC::KEYWORD,yytext);}
-"try_put"										{stats.category(SC::KEYWORD,yytext);}
-"release_wait"									{stats.category(SC::KEYWORD,yytext);}
-"tbb::flow::reserving"							{stats.category(SC::KEYWORD,yytext);}
-"tbb::flow::unlimited"							{stats.category(SC::KEYWORD,yytext);}
+parallel_invoke									{stats.category(SC::APIKEYWORD,yytext);stats.addCondition();}
+parallel_do										{stats.category(SC::APIKEYWORD,yytext);stats.addCondition();}
+parallel_sort									{stats.category(SC::APIKEYWORD,yytext);stats.addCondition();}
+parallel_for_each								{stats.category(SC::APIKEYWORD,yytext);stats.addCondition();}
+enqueue											{stats.category(SC::APIKEYWORD,yytext);}
+execute											{stats.category(SC::APIKEYWORD,yytext);}
+wait_for_all									{stats.category(SC::APIKEYWORD,yytext);}
+reserve_wait									{stats.category(SC::APIKEYWORD,yytext);}
+try_put											{stats.category(SC::APIKEYWORD,yytext);}
+release_wait									{stats.category(SC::APIKEYWORD,yytext);}
+{oneTBB_prefix}reserving						{stats.category(SC::APIKEYWORD,yytext);}
+{oneTBB_prefix}unlimited						{stats.category(SC::APIKEYWORD,yytext);}
+
+  /***************** oneTBB Tick Count *****************/
+{oneTBB_prefix}tick_count						{stats.category(SC::APITYPE,yytext);}
+{oneTBB_prefix}tick_count::now					{stats.category(SC::APIKEYWORD,yytext);}
 
   /***************** AVX Specific Types and Functions *****************/
-__m(128|256|512)[di]?							{stats.category(SC::APIFUNCTION,yytext);}
-_mm(128|256|512)?_[a-zA-Z0-9_]+					{stats.category(SC::APIFUNCTION,yytext);}
+__m(128|256|512)[di]?							{stats.category(SC::APILLTYPE,yytext);}
+_mm(128|256|512)?_[a-zA-Z_][a-zA-Z0-9_]*\s*		{
+	// Remove the open parenthesis
+	std::string buffer = yytext;
+	buffer.erase(buffer.size() - 1);
+	stats.category(SC::APILLKEYWORD, buffer);
+}
 
   /***************** SIMD Specific Types and Functions *****************/
-simd_t											{stats.category(SC::TYPE,yytext);}
-simd_i											{stats.category(SC::TYPE,yytext);}
-simd_f											{stats.category(SC::TYPE,yytext);}
-stdx::where										{stats.category(SC::KEYWORD,yytext);stats.decOperator();}
-stdx::reduce									{stats.category(SC::KEYWORD,yytext);stats.decOperator();}
-element_aligned									{stats.category(SC::KEYWORD,yytext);}
+simd_t											{stats.category(SC::APITYPE,yytext);}
+simd_i											{stats.category(SC::APITYPE,yytext);}
+simd_f											{stats.category(SC::APITYPE,yytext);}
+stdx::where										{stats.category(SC::APIKEYWORD,yytext);stats.decOperator();}
+stdx::reduce									{stats.category(SC::APIKEYWORD,yytext);stats.decOperator();}
+element_aligned									{stats.category(SC::APIKEYWORD,yytext);}
 stdx::[a-zA-Z_][a-zA-Z0-9_]*\s*\( 				{
 	// Remove the open parenthesis
 	std::string buffer = yytext;
 	buffer.erase(buffer.size() - 1);
-	stats.category(SC::APIFUNCTION, buffer);
+	stats.category(SC::APIKEYWORD, buffer);
 	stats.category(SC::OPERATOR, "(");
 	// Print buffer
 	printf("%s\n", buffer.c_str());
@@ -311,24 +463,21 @@ stdx::[a-zA-Z_][a-zA-Z0-9_]*\s*\( 				{
 	size_t dot = buffer.find('.');
 	std::string h = buffer.substr(0, dot);
 	std::string function = buffer.substr(dot + 1);
-	trimSpaces(h);
-	trimSpaces(function);
 	stats.category(SC::IDENTIFIER, h);
-	stats.category(SC::APIFUNCTION, function);
+	stats.category(SC::APIKEYWORD, function);
 	stats.addCondition();
 }
 
 {SYCL_combined} {
+	char next_char = yyinput();
     std::string sycl_combined = yytext;
-    trimSpaces(sycl_combined);
 
     // Comprueba si es una función (presencia de '()')
-    if (sycl_combined.find("(") != std::string::npos) {
+    if (next_char == '(') {
         // Maneja como función
         std::string function_name = sycl_combined.substr(0, sycl_combined.find("("));
-        stats.category(SC::APIFUNCTION, function_name);
+        stats.category(SC::APIKEYWORD, function_name);
 		stats.category(SC::OPERATOR, "(");
-		printf("SYCL_combined\n");
     } else {
         // Maneja como tipo
         size_t openBracket = sycl_combined.find('<');
@@ -341,7 +490,7 @@ stdx::[a-zA-Z_][a-zA-Z0-9_]*\s*\( 				{
             trimSpaces(type_param);
 
             // Añadir el tipo
-            stats.category(SC::TYPE, type_name);
+            stats.category(SC::APITYPE, type_name);
 
             // Comprobar si el parámetro es un número o un identificador
             if (std::all_of(type_param.begin(), type_param.end(), ::isdigit)) {
@@ -351,8 +500,9 @@ stdx::[a-zA-Z_][a-zA-Z0-9_]*\s*\( 				{
             }
         } else {
             // Solo es un tipo sin parámetros <>
-            stats.category(SC::TYPE, sycl_combined);
+            stats.category(SC::APITYPE, sycl_combined);
         }
+		unput(next_char);
     }
 }
 
@@ -362,44 +512,55 @@ stdx::[a-zA-Z_][a-zA-Z0-9_]*\s*\( 				{
     size_t dot = buffer.find('.');
     size_t openParen = buffer.find('(');
     std::string function = buffer.substr(dot + 1, openParen - dot - 1);
-    stats.category(SC::APIFUNCTION, function);
+    stats.category(SC::APIKEYWORD, function);
     stats.category(SC::OPERATOR, "(");
 }
 
   /***************** SYCL Types *****************/
-handler											{stats.category(SC::TYPE,yytext);}
-id												{stats.category(SC::TYPE,yytext);}
-event											{stats.category(SC::TYPE,yytext);}
-range											{stats.category(SC::TYPE,yytext);}
-accessor										{stats.category(SC::TYPE,yytext);}
-device											{stats.category(SC::TYPE,yytext);}
-platform										{stats.category(SC::TYPE,yytext);}
-context											{stats.category(SC::TYPE,yytext);}
-nd_range										{stats.category(SC::TYPE,yytext);}
-buffer											{stats.category(SC::TYPE,yytext);}
-queue											{stats.category(SC::TYPE,yytext);}
-property_list									{stats.category(SC::TYPE,yytext);}
-backend											{stats.category(SC::TYPE,yytext);}
-property										{stats.category(SC::TYPE,yytext);}
-device											{stats.category(SC::TYPE,yytext);}
-info											{stats.category(SC::TYPE,yytext);}
-local_accessor									{stats.category(SC::TYPE,yytext);}
+handler											{stats.category(SC::APITYPE,yytext);}
+id												{stats.category(SC::APITYPE,yytext);}
+event											{stats.category(SC::APITYPE,yytext);}
+range											{stats.category(SC::APITYPE,yytext);}
+accessor										{stats.category(SC::APITYPE,yytext);}
+device											{stats.category(SC::APITYPE,yytext);}
+platform										{stats.category(SC::APITYPE,yytext);}
+context											{stats.category(SC::APITYPE,yytext);}
+nd_range										{stats.category(SC::APITYPE,yytext);}
+buffer											{stats.category(SC::APITYPE,yytext);}
+queue											{stats.category(SC::APITYPE,yytext);}
+property_list									{stats.category(SC::APITYPE,yytext);}
+backend											{stats.category(SC::APITYPE,yytext);}
+property										{stats.category(SC::APITYPE,yytext);}
+device											{stats.category(SC::APITYPE,yytext);}
+info											{stats.category(SC::APITYPE,yytext);}
+local_accessor									{stats.category(SC::APITYPE,yytext);}
 
   /***************** SYCL Function Calls ***************/
-"sycl::get_nd_range"							{stats.category(SC::APIFUNCTION,yytext);}
-"get_group_range"								{stats.category(SC::APIFUNCTION,yytext);}
-"get_global_range"								{stats.category(SC::APIFUNCTION,yytext);}
-"get_local_range"								{stats.category(SC::APIFUNCTION,yytext);}
-"get_global_id"									{stats.category(SC::APIFUNCTION,yytext);}
-"get_local_id"									{stats.category(SC::APIFUNCTION,yytext);}
-"barrier"										{stats.category(SC::APIFUNCTION,yytext);}
-"depends_on"									{stats.category(SC::APIFUNCTION,yytext);}
-"mad"											{stats.category(SC::APIFUNCTION,yytext);}
-"single_task"									{stats.category(SC::APIFUNCTION,yytext);stats.addCondition();}
-"create_sub_devices"							{stats.category(SC::APIFUNCTION,yytext);}
-"get_device"									{stats.category(SC::APIFUNCTION,yytext);}
-"get_platform"									{stats.category(SC::APIFUNCTION,yytext);}
-"wait"											{stats.category(SC::APIFUNCTION,yytext);}
+get_nd_range									{stats.category(SC::APIKEYWORD,yytext);}
+get_group_range									{stats.category(SC::APIKEYWORD,yytext);}
+get_global_range								{stats.category(SC::APIKEYWORD,yytext);}
+get_local_range									{stats.category(SC::APIKEYWORD,yytext);}
+get_global_id									{stats.category(SC::APIKEYWORD,yytext);}
+get_local_id									{stats.category(SC::APIKEYWORD,yytext);}
+barrier											{stats.category(SC::APIKEYWORD,yytext);}
+depends_on										{stats.category(SC::APIKEYWORD,yytext);}
+mad												{stats.category(SC::APIKEYWORD,yytext);}
+single_task										{stats.category(SC::APIKEYWORD,yytext);}
+create_sub_devices								{stats.category(SC::APIKEYWORD,yytext);}
+get_device										{stats.category(SC::APIKEYWORD,yytext);}
+get_platform									{stats.category(SC::APIKEYWORD,yytext);}
+wait											{stats.category(SC::APIKEYWORD,yytext);}
+
+  /***************** Custom Types *****************/
+EnergyPCM										{stats.category(SC::CUSTOMTYPE,yytext);}
+ViVidItem										{stats.category(SC::CUSTOMTYPE,yytext);}
+Tracer											{stats.category(SC::CUSTOMTYPE,yytext);}
+ApplicationData									{stats.category(SC::CUSTOMTYPE,yytext);}
+InputArgs										{stats.category(SC::CUSTOMTYPE,yytext);}
+SyclEventInfo									{stats.category(SC::CUSTOMTYPE,yytext);}
+Acc												{stats.category(SC::CUSTOMTYPE,yytext);}
+circular_buffer									{stats.category(SC::CUSTOMTYPE,yytext);}
+
 
   /***************** Operator Handling *****************/
 "..."											{stats.category(SC::OPERATOR,yytext);}
@@ -459,17 +620,19 @@ L?'(\\.|[^\\'])+'								{stats.category(SC::CONSTANT,yytext);}
 {D}*"."{D}+({E})?{FS}?							{stats.category(SC::CONSTANT,yytext);}
 {D}+"."{D}*({E})?{FS}?							{stats.category(SC::CONSTANT,yytext);}
 L?\"(\\.|[^\\"])*\"								{stats.category(SC::CONSTANT,yytext);/*STRING_LITERAL*/}
-
   /***************** Function Call Handling *****************/
-
-	/* [a-zA-Z_][a-zA-Z0-9_]*\s*\(([^)]|\s*\([^\)]*\))*\) {
-		printf("function: %s\n", yytext);
-		processFunction(yytext, stats);
-	} */
 
   /***************** Identifier Handling *****************/
 {L}({L}|{D})*									{
-	stats.category(SC::IDENTIFIER,yytext);
+	char next_char = yyinput();
+	if (next_char == '(') {
+		// Es una función
+		stats.category(SC::CUSTOMKEYWORD,yytext);
+	} else {
+		// Es un identificador
+		stats.category(SC::IDENTIFIER,yytext);
+		unput(next_char);
+	}
 }
 
 
@@ -492,84 +655,6 @@ void trimSpaces(std::string& str) {
 		return !std::isspace(ch);
 	}).base(), str.end());
 }
-
-void extractVariableNames(const std::string& arg, CodeStatistics& stat) {
-	std::istringstream iss(arg);
-	std::string token;
-	std::vector<std::string> tokens;
-
-	while (iss >> token) {
-		tokens.push_back(token);
-	}
-
-	// Lógica para analizar los tokens
-	if (tokens.size() == 3) {;
-		stat.category(SC::TYPE, tokens[0]);
-		stat.category(SC::TYPE, tokens[1]);
-		stat.category(SC::IDENTIFIER, tokens[2]);
-	} else if (tokens.size() == 2) {
-		stat.category(SC::TYPE, tokens[0]);
-		stat.category(SC::IDENTIFIER, tokens[1]);
-	} else if (tokens.size() == 1) {
-		stat.category(SC::IDENTIFIER, tokens[0]);
-	}
-}
-
-void processFunction(const std::string& functionString, CodeStatistics& stat) {
-	std::string buffer = functionString;
-	std::replace(buffer.begin(), buffer.end(), '\n', ' ');
-	std::replace(buffer.begin(), buffer.end(), '\t', ' ');
-
-	size_t openParen = buffer.find('(');
-	size_t closeParen = buffer.rfind(')');
-
-	if (openParen != std::string::npos && closeParen != std::string::npos && openParen < closeParen) {
-		std::string name = buffer.substr(0, openParen);
-		trimSpaces(name);
-		stat.category(SC::APIFUNCTION, name);
-
-		std::string args = buffer.substr(openParen + 1, closeParen - openParen - 1);
-
-		if (!args.empty()) {
-			processArguments(args, stat);
-		}
-	}
-}
-
-void processArguments(const std::string& args, CodeStatistics& stat) {
-	int nestedFunctionCount = 0;
-	size_t start = 0;
-
-	for (size_t i = 0; i < args.size(); ++i) {
-		if (args[i] == '(') {
-			nestedFunctionCount++;
-		} else if (args[i] == ')') {
-			nestedFunctionCount--;
-		} else if (args[i] == ',' && nestedFunctionCount == 0) {
-			std::string arg = args.substr(start, i - start);
-			trimSpaces(arg);
-
-			if (arg.find('(') != std::string::npos) {
-				processFunction(arg, stat);
-			} else {
-				extractVariableNames(arg, stat);
-			}
-			start = i + 1;
-		}
-	}
-
-	if (start < args.size()) {
-		std::string arg = args.substr(start);
-		trimSpaces(arg);
-
-		if (arg.find('(') != std::string::npos) {
-			processFunction(arg, stat);
-		} else {
-			extractVariableNames(arg, stat);
-		}
-	}
-}
-
 
 /*
 
