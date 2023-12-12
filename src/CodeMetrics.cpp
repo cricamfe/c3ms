@@ -66,12 +66,19 @@ void MetricsCalculator::report(int verbosity, const std::string& filePath, int l
         // Additional statistics
         reportStream << "Additional Statistics:\n" << std::string(80, '-') << "\n";
         reportStream << formatMetric("Types", cs.getCounterValue(StatsCategory::TYPE), std::to_string(cs.getCSSetSize(StatsCategory::TYPE)) + " unique")
+                        << formatMetric("Types (API)", cs.getCounterValue(StatsCategory::APITYPE), std::to_string(cs.getCSSetSize(StatsCategory::APITYPE)) + " unique")
+                        << formatMetric("Types (API Low Level)", cs.getCounterValue(StatsCategory::APILLTYPE), std::to_string(cs.getCSSetSize(StatsCategory::APILLTYPE)) + " unique")
+                        << formatMetric("Types (Dev)", cs.getCounterValue(StatsCategory::CUSTOMTYPE), std::to_string(cs.getCSSetSize(StatsCategory::CUSTOMTYPE)) + " unique")
                         << formatMetric("Constants", cs.getCounterValue(StatsCategory::CONSTANT), std::to_string(cs.getCSSetSize(StatsCategory::CONSTANT)) + " unique")
+                        << formatMetric("Constants (API)", cs.getCounterValue(StatsCategory::APICONSTANT), std::to_string(cs.getCSSetSize(StatsCategory::APICONSTANT)) + " unique")
+                        << formatMetric("Constants (API Low Level)", cs.getCounterValue(StatsCategory::APILLCONSTANT), std::to_string(cs.getCSSetSize(StatsCategory::APILLCONSTANT)) + " unique")
+                        << formatMetric("Constants (Dev)", cs.getCounterValue(StatsCategory::CUSTOMCONSTANT), std::to_string(cs.getCSSetSize(StatsCategory::CUSTOMCONSTANT)) + " unique")
                         << formatMetric("Identifiers", cs.getCounterValue(StatsCategory::IDENTIFIER), std::to_string(cs.getCSSetSize(StatsCategory::IDENTIFIER)) + " unique")
                         << formatMetric("Cspecs", cs.getCounterValue(StatsCategory::CSPECIFIER), std::to_string(cs.getCSSetSize(StatsCategory::CSPECIFIER)) + " unique")
                         << formatMetric("Keywords", cs.getCounterValue(StatsCategory::KEYWORD), std::to_string(cs.getCSSetSize(StatsCategory::KEYWORD)) + " unique")
-                        << formatMetric("Function Call (API)", cs.getCounterValue(StatsCategory::APIFUNCTION), std::to_string(cs.getCSSetSize(StatsCategory::APIFUNCTION)) + " unique")
-                        << formatMetric("Function Call (Dev)", cs.getCounterValue(StatsCategory::CUSTOMFUNCTION), std::to_string(cs.getCSSetSize(StatsCategory::CUSTOMFUNCTION)) + " unique")
+                        << formatMetric("Keywords (API)", cs.getCounterValue(StatsCategory::APIKEYWORD), std::to_string(cs.getCSSetSize(StatsCategory::APIKEYWORD)) + " unique")
+                        << formatMetric("Keywords (API Low Level)", cs.getCounterValue(StatsCategory::APILLKEYWORD), std::to_string(cs.getCSSetSize(StatsCategory::APILLKEYWORD)) + " unique")
+                        << formatMetric("Keywords (Dev)", cs.getCounterValue(StatsCategory::CUSTOMKEYWORD), std::to_string(cs.getCSSetSize(StatsCategory::CUSTOMKEYWORD)) + " unique")
                         << formatMetric("Operators", cs.getOperators(), std::to_string(cs.getUniqueOperators()) + " unique")
                         << formatMetric("Operands", cs.getOperands(), std::to_string(cs.getUniqueOperands()) + " unique")
                         << std::string(80, '-') << "\n";

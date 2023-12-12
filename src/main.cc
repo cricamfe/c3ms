@@ -17,8 +17,9 @@ void printDebugInfo(const std::string& header, const CodeStatistics& stats, int 
     std::clog << header << " (" << linesOfCode << " lines)" << std::endl;
     std::clog << stats.printOperators() << std::endl;
     std::clog << stats.printOperands() << std::endl;
-    std::clog << stats.printAPIFunctions() << std::endl;
-    std::clog << stats.printCustomFunctions() << std::endl;
+    std::clog << stats.printAPI() << std::endl;
+    std::clog << stats.printAPILowLevel() << std::endl;
+    std::clog << stats.printCustom() << std::endl;
     if (printCodeFlag && !code.empty()) {
       std::clog << code << std::endl;
     }

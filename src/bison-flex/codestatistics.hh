@@ -29,15 +29,22 @@ namespace c3ms
              * @brief Enum class representing different categories for code statistics.
              */
             enum class StatsCategory {
-                TYPE,
-                CONSTANT,
-                IDENTIFIER,
-                CSPECIFIER,
-                KEYWORD,
-                OPERATOR,
-                CONDITION,
-                APIFUNCTION,
-                CUSTOMFUNCTION,
+                TYPE,           // Standard C++ types
+                CONSTANT,       // Standard C++ constants
+                IDENTIFIER,     // Standard C++ identifiers     
+                CSPECIFIER,     // Standard C++ specifiers
+                KEYWORD,        // Standard C++ keywords
+                OPERATOR,       // Standard C++ operators
+                CONDITION,      // Standard C++ if, else, else if, switch, case, default
+                APIKEYWORD,     // API High Level
+                APITYPE,        // API High Level
+                APICONSTANT,    // API High Level
+                APILLKEYWORD,   // API Low Level
+                APILLTYPE,      // API Low Level
+                APILLCONSTANT,  // API Low Level
+                CUSTOMKEYWORD,  // Custom Keywords
+                CUSTOMCONSTANT, // Custom Constants
+                CUSTOMTYPE      // Custom Types
             };
 
             // Constructors and Destructor
@@ -70,8 +77,9 @@ namespace c3ms
             void printHeader(std::ostringstream& result, std::string_view left_header, std::string_view right_header, int nameWidth, int valueWidth, int totalWidth) const;
             std::string printOperators() const;
             std::string printOperands() const;
-            std::string printCustomFunctions() const;
-            std::string printAPIFunctions() const;
+            std::string printCustom() const;
+            std::string printAPI() const;
+            std::string printAPILowLevel() const;
 
             // Overloaded Operators
             CodeStatistics& operator+=(const CodeStatistics& rhs);
@@ -98,8 +106,15 @@ namespace c3ms
             StatSize nKeywords_ = 0;
             StatSize nOperators_ = 0;
             StatSize nConditions_ = 0;
-            StatSize nAPIFunctions_ = 0;
-            StatSize nCustomFunctions_ = 0;
+            StatSize nAPIKeywords_ = 0;
+            StatSize nAPITypes_ = 0;
+            StatSize nAPIConstants_ = 0;
+            StatSize nAPILLKeywords_ = 0;
+            StatSize nAPILLTypes_ = 0;
+            StatSize nAPILLConstants_ = 0;
+            StatSize nCustomKeywords_ = 0;
+            StatSize nCustomTypes_ = 0;
+            StatSize nCustomConstants_ = 0;
 
             CSSet typesSet_;
             CSSet constantsSet_;
@@ -108,8 +123,15 @@ namespace c3ms
             CSSet keywordsSet_;
             CSSet operatorsSet_;
             CSSet conditionsSet_;
-            CSSet apiFunctionsSet_;
-            CSSet customFunctionsSet_;
+            CSSet apiKeywordsSet_;
+            CSSet apiTypesSet_;
+            CSSet apiConstantsSet_;
+            CSSet apiLLKeywordsSet_;
+            CSSet apiLLTypesSet_;
+            CSSet apiLLConstantsSet_;
+            CSSet customKeywordsSet_;
+            CSSet customTypesSet_;
+            CSSet customConstantsSet_;
 
             // Friends of CodeStatistics
             friend class CodeParser;

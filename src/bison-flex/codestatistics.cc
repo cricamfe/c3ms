@@ -10,6 +10,7 @@ namespace c3ms
           error_(0)
     {
         // No need for any other initialization
+        // scanner_->set_debug(true);
     }
     int CodeStatistics::parse()
     {
@@ -52,8 +53,15 @@ namespace c3ms
             case StatsCategory::KEYWORD: return nKeywords_;
             case StatsCategory::OPERATOR: return nOperators_;
             case StatsCategory::CONDITION: return nConditions_;
-            case StatsCategory::APIFUNCTION: return nAPIFunctions_;
-            case StatsCategory::CUSTOMFUNCTION: return nCustomFunctions_;
+            case StatsCategory::APIKEYWORD: return nAPIKeywords_;
+            case StatsCategory::APITYPE: return nAPITypes_;
+            case StatsCategory::APICONSTANT: return nAPIConstants_;
+            case StatsCategory::APILLKEYWORD: return nAPILLKeywords_;
+            case StatsCategory::APILLTYPE: return nAPILLTypes_;
+            case StatsCategory::APILLCONSTANT: return nAPILLConstants_;
+            case StatsCategory::CUSTOMKEYWORD: return nCustomKeywords_;
+            case StatsCategory::CUSTOMTYPE: return nCustomTypes_;
+            case StatsCategory::CUSTOMCONSTANT: return nCustomConstants_;
             default: throw std::invalid_argument("Unknown counter type");
         }        
     }
@@ -67,25 +75,50 @@ namespace c3ms
             case StatsCategory::KEYWORD: return keywordsSet_.size();
             case StatsCategory::OPERATOR: return operatorsSet_.size();
             case StatsCategory::CONDITION: return conditionsSet_.size();
-            case StatsCategory::APIFUNCTION: return apiFunctionsSet_.size();
-            case StatsCategory::CUSTOMFUNCTION: return customFunctionsSet_.size();
+            case StatsCategory::APIKEYWORD: return apiKeywordsSet_.size();
+            case StatsCategory::APITYPE: return apiTypesSet_.size();
+            case StatsCategory::APICONSTANT: return apiConstantsSet_.size();
+            case StatsCategory::APILLKEYWORD: return apiLLKeywordsSet_.size();
+            case StatsCategory::APILLTYPE: return apiLLTypesSet_.size();
+            case StatsCategory::APILLCONSTANT: return apiLLConstantsSet_.size();
+            case StatsCategory::CUSTOMKEYWORD: return customKeywordsSet_.size();
+            case StatsCategory::CUSTOMTYPE: return customTypesSet_.size();
+            case StatsCategory::CUSTOMCONSTANT: return customConstantsSet_.size();
             default: throw std::invalid_argument("Unknown CSSet type");
         }
     }
 
     CodeStatistics::StatSize CodeStatistics::getUniqueOperands() const  {
-        return getCSSetSize(StatsCategory::CONSTANT) + getCSSetSize(StatsCategory::IDENTIFIER);
+        // return getCSSetSize(StatsCategory::CONSTANT) + getCSSetSize(StatsCategory::IDENTIFIER);
+        CodeStatistics::StatSize result = 0;
+        result = getCSSetSize(StatsCategory::CONSTANT) + getCSSetSize(StatsCategory::IDENTIFIER);
+        result += getCSSetSize(StatsCategory::APICONSTANT) + getCSSetSize(StatsCategory::APILLCONSTANT) + getCSSetSize(StatsCategory::CUSTOMCONSTANT);
+        result += getCSSetSize(StatsCategory::APITYPE) + getCSSetSize(StatsCategory::APIKEYWORD);
+        return result;
     }
     CodeStatistics::StatSize CodeStatistics::getUniqueOperators() const {
-        return getCSSetSize(StatsCategory::CSPECIFIER) + getCSSetSize(StatsCategory::KEYWORD) + getCSSetSize(StatsCategory::OPERATOR) + getCSSetSize(StatsCategory::TYPE);
+        // return getCSSetSize(StatsCategory::CSPECIFIER) + getCSSetSize(StatsCategory::KEYWORD) + getCSSetSize(StatsCategory::OPERATOR) + getCSSetSize(StatsCategory::TYPE);
+        CodeStatistics::StatSize result = 0;
+        result = getCSSetSize(StatsCategory::CSPECIFIER) + getCSSetSize(StatsCategory::KEYWORD) + getCSSetSize(StatsCategory::OPERATOR) + getCSSetSize(StatsCategory::TYPE);
+        result += getCSSetSize(StatsCategory::APILLKEYWORD) + getCSSetSize(StatsCategory::APILLTYPE) + getCSSetSize(StatsCategory::CUSTOMKEYWORD) + getCSSetSize(StatsCategory::CUSTOMTYPE);
+        return result;
     }
 
     CodeStatistics::StatSize CodeStatistics::getOperands() const {
-        return getCounterValue(StatsCategory::CONSTANT) + getCounterValue(StatsCategory::IDENTIFIER);
+        // return getCounterValue(StatsCategory::CONSTANT) + getCounterValue(StatsCategory::IDENTIFIER);
+        CodeStatistics::StatSize result = 0;
+        result = getCounterValue(StatsCategory::CONSTANT) + getCounterValue(StatsCategory::IDENTIFIER);
+        result += getCounterValue(StatsCategory::APICONSTANT) + getCounterValue(StatsCategory::APILLCONSTANT) + getCounterValue(StatsCategory::CUSTOMCONSTANT);
+        result += getCounterValue(StatsCategory::APITYPE) + getCounterValue(StatsCategory::KEYWORD);
+        return result;
     }
 
     CodeStatistics::StatSize CodeStatistics::getOperators() const {
-        return getCounterValue(StatsCategory::CSPECIFIER) + getCounterValue(StatsCategory::KEYWORD) + getCounterValue(StatsCategory::OPERATOR) + getCounterValue(StatsCategory::TYPE);
+        // return getCounterValue(StatsCategory::CSPECIFIER) + getCounterValue(StatsCategory::KEYWORD) + getCounterValue(StatsCategory::OPERATOR) + getCounterValue(StatsCategory::TYPE);
+        CodeStatistics::StatSize result = 0;
+        result = getCounterValue(StatsCategory::CSPECIFIER) + getCounterValue(StatsCategory::KEYWORD) + getCounterValue(StatsCategory::OPERATOR) + getCounterValue(StatsCategory::TYPE);
+        result += getCounterValue(StatsCategory::APILLKEYWORD) + getCounterValue(StatsCategory::APILLTYPE) + getCounterValue(StatsCategory::CUSTOMKEYWORD) + getCounterValue(StatsCategory::CUSTOMTYPE);
+        return result;
     }
 
     void CodeStatistics::decOperator() { nOperators_--; }
@@ -103,8 +136,15 @@ namespace c3ms
         nKeywords_ = 0;
         nOperators_ = 0;
         nConditions_ = 0;
-        nAPIFunctions_ = 0;
-        nCustomFunctions_ = 0;
+        nAPIKeywords_ = 0;
+        nAPITypes_ = 0;
+        nAPIConstants_ = 0;
+        nAPILLKeywords_ = 0;
+        nAPILLTypes_ = 0;
+        nAPILLConstants_ = 0;
+        nCustomKeywords_ = 0;
+        nCustomTypes_ = 0;
+        nCustomConstants_ = 0;
         // Reset all sets
         typesSet_.clear();
         constantsSet_.clear();
@@ -113,8 +153,15 @@ namespace c3ms
         keywordsSet_.clear();
         operatorsSet_.clear();
         conditionsSet_.clear();
-        apiFunctionsSet_.clear();
-        customFunctionsSet_.clear();
+        apiKeywordsSet_.clear();
+        apiTypesSet_.clear();
+        apiConstantsSet_.clear();
+        apiLLKeywordsSet_.clear();
+        apiLLTypesSet_.clear();
+        apiLLConstantsSet_.clear();
+        customKeywordsSet_.clear();
+        customTypesSet_.clear();
+        customConstantsSet_.clear();
     }
 
     void CodeStatistics::printMetrics(std::ostringstream& result, const CSSet& set, const int nameWidth, const int valueWidth) const {
@@ -176,15 +223,17 @@ namespace c3ms
      * 
      * @return A string representing the formatted table.
      */
-    std::string CodeStatistics::printCustomFunctions() const {
+    std::string CodeStatistics::printCustom() const {
         const int nameWidth = 45; // Column width for metric names
         const int valueWidth = 15; // Adjusted column width for metric values
         const int totalWidth = 80; // Total width for both columns
         std::ostringstream result;
         // Adding header
-        printHeader(result, "Custom Function Calls", "Occurrences", nameWidth, valueWidth, totalWidth);
+        printHeader(result, "Developed by User", "Occurrences", nameWidth, valueWidth, totalWidth);
         // Combining all operand sets into a single table
-        printMetrics(result, customFunctionsSet_, nameWidth, valueWidth);
+        printMetrics(result, customKeywordsSet_, nameWidth, valueWidth);
+        printMetrics(result, customTypesSet_, nameWidth, valueWidth);
+        printMetrics(result, customConstantsSet_, nameWidth, valueWidth);
 
         return result.str();
     }
@@ -197,15 +246,40 @@ namespace c3ms
      * 
      * @return A string representing the formatted table.
      */
-    std::string CodeStatistics::printAPIFunctions() const {
+    std::string CodeStatistics::printAPI() const {
         const int nameWidth = 45; // Column width for metric names
         const int valueWidth = 15; // Adjusted column width for metric values
         const int totalWidth = 80; // Total width for both columns
         std::ostringstream result;
         // Adding header
-        printHeader(result, "API Function Calls", "Occurrences", nameWidth, valueWidth, totalWidth);
+        printHeader(result, "API", "Occurrences", nameWidth, valueWidth, totalWidth);
         // Combining all operand sets into a single table
-        printMetrics(result, apiFunctionsSet_, nameWidth, valueWidth);
+        printMetrics(result, apiKeywordsSet_, nameWidth, valueWidth);
+        printMetrics(result, apiTypesSet_, nameWidth, valueWidth);
+        printMetrics(result, apiConstantsSet_, nameWidth, valueWidth);
+
+        return result.str();
+    }
+
+    /**
+     * @brief Prints a formatted table of low-level API function calls and their occurrences.
+     * 
+     * @details This function prints a formatted table of low-level API function calls and their occurrences.
+     * Each row of the table contains the name of the low-level API function call and its occurrence count. The table is formatted with a specified column width for the low-level API function call names and the occurrence counts.
+     * 
+     * @return A string representing the formatted table.
+     */
+    std::string CodeStatistics::printAPILowLevel() const {
+        const int nameWidth = 45; // Column width for metric names
+        const int valueWidth = 15; // Adjusted column width for metric values
+        const int totalWidth = 80; // Total width for both columns
+        std::ostringstream result;
+        // Adding header
+        printHeader(result, "API (Low Level)", "Occurrences", nameWidth, valueWidth, totalWidth);
+        // Combining all operand sets into a single table
+        printMetrics(result, apiLLKeywordsSet_, nameWidth, valueWidth);
+        printMetrics(result, apiLLTypesSet_, nameWidth, valueWidth);
+        printMetrics(result, apiLLConstantsSet_, nameWidth, valueWidth);
 
         return result.str();
     }
@@ -218,8 +292,15 @@ namespace c3ms
         nKeywords_ += rhs.nKeywords_;
         nOperators_ += rhs.nOperators_;
         nConditions_ += rhs.nConditions_;
-        nAPIFunctions_ += rhs.nAPIFunctions_;
-        nCustomFunctions_ += rhs.nCustomFunctions_;
+        nAPIKeywords_ += rhs.nAPIKeywords_;
+        nAPITypes_ += rhs.nAPITypes_;
+        nAPIConstants_ += rhs.nAPIConstants_;
+        nAPILLKeywords_ += rhs.nAPILLKeywords_;
+        nAPILLTypes_ += rhs.nAPILLTypes_;
+        nAPILLConstants_ += rhs.nAPILLConstants_;
+        nCustomKeywords_ += rhs.nCustomKeywords_;
+        nCustomTypes_ += rhs.nCustomTypes_;
+        nCustomConstants_ += rhs.nCustomConstants_;
 
         auto combineCSSets = [](CSSet& lhsSet, const CSSet& rhsSet) {
             for (const auto& element : rhsSet) {
@@ -237,8 +318,15 @@ namespace c3ms
         combineCSSets(keywordsSet_, rhs.keywordsSet_);
         combineCSSets(operatorsSet_, rhs.operatorsSet_);
         combineCSSets(conditionsSet_, rhs.conditionsSet_);
-        combineCSSets(apiFunctionsSet_, rhs.apiFunctionsSet_);
-        combineCSSets(customFunctionsSet_, rhs.customFunctionsSet_);
+        combineCSSets(apiKeywordsSet_, rhs.apiKeywordsSet_);
+        combineCSSets(apiTypesSet_, rhs.apiTypesSet_);
+        combineCSSets(apiConstantsSet_, rhs.apiConstantsSet_);
+        combineCSSets(apiLLKeywordsSet_, rhs.apiLLKeywordsSet_);
+        combineCSSets(apiLLTypesSet_, rhs.apiLLTypesSet_);
+        combineCSSets(apiLLConstantsSet_, rhs.apiLLConstantsSet_);
+        combineCSSets(customKeywordsSet_, rhs.customKeywordsSet_);
+        combineCSSets(customTypesSet_, rhs.customTypesSet_);
+        combineCSSets(customConstantsSet_, rhs.customConstantsSet_);
 
         return *this;
     }
@@ -257,8 +345,15 @@ namespace c3ms
             case StatsCategory::KEYWORD: return nKeywords_;
             case StatsCategory::OPERATOR: return nOperators_;
             case StatsCategory::CONDITION: return nConditions_;
-            case StatsCategory::APIFUNCTION: return nAPIFunctions_;
-            case StatsCategory::CUSTOMFUNCTION: return nCustomFunctions_;
+            case StatsCategory::APIKEYWORD: return nAPIKeywords_;
+            case StatsCategory::APITYPE: return nAPITypes_;
+            case StatsCategory::APICONSTANT: return nAPIConstants_;
+            case StatsCategory::APILLKEYWORD: return nAPILLKeywords_;
+            case StatsCategory::APILLTYPE: return nAPILLTypes_;
+            case StatsCategory::APILLCONSTANT: return nAPILLConstants_;
+            case StatsCategory::CUSTOMKEYWORD: return nCustomKeywords_;
+            case StatsCategory::CUSTOMTYPE: return nCustomTypes_;
+            case StatsCategory::CUSTOMCONSTANT: return nCustomConstants_;
             default: throw std::invalid_argument("Unknown counter type");
         }
     }
@@ -272,8 +367,15 @@ namespace c3ms
             case StatsCategory::KEYWORD: return keywordsSet_;
             case StatsCategory::OPERATOR: return operatorsSet_;
             case StatsCategory::CONDITION: return conditionsSet_;
-            case StatsCategory::APIFUNCTION: return apiFunctionsSet_;
-            case StatsCategory::CUSTOMFUNCTION: return customFunctionsSet_;
+            case StatsCategory::APIKEYWORD: return apiKeywordsSet_;
+            case StatsCategory::APITYPE: return apiTypesSet_;
+            case StatsCategory::APICONSTANT: return apiConstantsSet_;
+            case StatsCategory::APILLKEYWORD: return apiLLKeywordsSet_;
+            case StatsCategory::APILLTYPE: return apiLLTypesSet_;
+            case StatsCategory::APILLCONSTANT: return apiLLConstantsSet_;
+            case StatsCategory::CUSTOMKEYWORD: return customKeywordsSet_;
+            case StatsCategory::CUSTOMTYPE: return customTypesSet_;
+            case StatsCategory::CUSTOMCONSTANT: return customConstantsSet_;
             default: throw std::invalid_argument("Unknown CSSet type");
         }
     }
@@ -287,8 +389,15 @@ namespace c3ms
             case StatsCategory::KEYWORD: return "Keyword";
             case StatsCategory::OPERATOR: return "Operator";
             case StatsCategory::CONDITION: return "Condition";
-            case StatsCategory::APIFUNCTION: return "API Function";
-            case StatsCategory::CUSTOMFUNCTION: return "Custom Function";
+            case StatsCategory::APIKEYWORD: return "API Keyword";
+            case StatsCategory::APITYPE: return "API Type";
+            case StatsCategory::APICONSTANT: return "API Constant";
+            case StatsCategory::APILLKEYWORD: return "API Low Level Keyword";
+            case StatsCategory::APILLTYPE: return "API Low Level Type";
+            case StatsCategory::APILLCONSTANT: return "API Low Level Constant";
+            case StatsCategory::CUSTOMKEYWORD: return "Custom Keyword";
+            case StatsCategory::CUSTOMTYPE: return "Custom Type";
+            case StatsCategory::CUSTOMCONSTANT: return "Custom Constant";
             default: return "Unknown";
         }
     }
