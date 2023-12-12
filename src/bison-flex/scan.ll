@@ -9,6 +9,7 @@
 #include <vector>
 #include <cctype>
 #include <algorithm>
+#include <set>
 
 /*  Defines some macros to update locations */
 #define STEP()			yylloc->step();
@@ -23,13 +24,40 @@ typedef c3ms::CodeParser::token_type token_type;
 
 #define yyterminate() return token::TOK_EOF
 
-// Import enum IDType from CodeStatistics
-typedef c3ms::CodeStatistics::StatsCategory SC;
-
 // Advice of the use of external class named CodeStatistics
 typedef c3ms::CodeStatistics CodeStatistics;
 
+// Import enum IDType from CodeStatistics
+typedef c3ms::CodeStatistics::StatsCategory SC;
+
 void trimSpaces(std::string& str);
+
+bool isStandardType(const std::string& type) {
+    static const std::set<std::string> standardTypes = {
+        // Tipos básicos
+        "int", "float", "double", "char", "long", "short", "bool", 
+        "wchar_t", "char16_t", "char32_t", "signed", "unsigned", 
+        "void", "auto", "size_t", "ptrdiff_t", "auto",
+
+        // Tipos desde C++17 y C++20
+        "std::byte", "std::any", "std::optional", "std::variant", 
+        "std::string_view", "std::span",
+
+        // Tipos de puntero inteligente
+        "std::unique_ptr", "std::shared_ptr", "std::weak_ptr",
+
+        // Tipos de contenedor
+        "std::array", "std::vector", "std::deque", "std::list", 
+        "std::forward_list", "std::set", "std::map", "std::multiset", 
+        "std::multimap", "std::unordered_set", "std::unordered_map", 
+        "std::unordered_multiset", "std::unordered_multimap",
+
+        // Otros tipos de la biblioteca estándar
+        "std::pair", "std::tuple", "std::function", "std::bitset",
+        "std::queue", "std::stack", "std::priority_queue"
+    };
+    return standardTypes.find(type) != standardTypes.end();
+}
 
 %}
 
@@ -42,7 +70,6 @@ void trimSpaces(std::string& str);
 %option batch
 %option prefix="c3ms"
 %x comment
-%x LAMBDA
 %s includestate
 
 /*
@@ -72,6 +99,15 @@ oneTBB_prefix					((oneapi::tbb::)|(tbb::))?
 oneTBB_flow_prefix				{oneTBB_prefix}flow::
 oneTBB_filter_mode				{oneTBB_prefix}filter_mode::
 oneTBB_parallel_for				parallel_for
+
+/* Nueva abreviación para declaraciones de tipo y variables */
+/* CppVarDecl        [a-zA-Z_][a-zA-Z_0-9]*\s*[*&]*\s+([*&\s]*[a-zA-Z_][a-zA-Z_0-9]*\s*(,|;|\{|\=))+ */
+
+SimpleVarDecl    [a-zA-Z_][a-zA-Z_0-9]*[ \t]+[a-zA-Z_][a-zA-Z_0-9]*[ \t]*;
+PointerVarDecl   [a-zA-Z_][a-zA-Z_0-9]*[ \t]*\*[ \t]*[a-zA-Z_][a-zA-Z_0-9]*[ \t]*;
+InitVarDecl      [a-zA-Z_][a-zA-Z0-9_]*[ \t]+[a-zA-Z_][a-zA-Z0-9_]*[ \t]*=
+MultiVarDecl     [a-zA-Z_][a-zA-Z_0-9]*[ \t]+([a-zA-Z_][a-zA-Z_0-9]*[ \t]*(,|;)[ \t]*)+
+
 %%
 
  /* The rules. */
@@ -354,6 +390,134 @@ std::[a-zA-Z_][a-zA-Z0-9_]*\s*\( 				{
 	printf("%s\n", buffer.c_str());
 }
 
+std::[a-zA-Z_][a-zA-Z0-9_]* 					{stats.category(SC::TYPE,yytext);}	
+
+  /***************** C++ Custom Types *****************/
+
+	/* {SimpleVarDecl} {
+		std::string str(yytext);
+		size_t start = str.find_first_not_of(" \t");
+		size_t end = str.find_last_not_of(" \t");
+		str = str.substr(start, end - start + 1);
+		size_t spacePos = str.find_last_of(" \t");
+		std::string type = str.substr(0, spacePos);
+		std::string varName = str.substr(spacePos + 1);
+		if (isStandardType(type)) {
+			stats.category(SC::TYPE, type.c_str());
+		} else {
+			stats.category(SC::CUSTOMTYPE, type.c_str());
+		}
+		stats.category(SC::IDENTIFIER, varName.c_str());
+		stats.category(SC::OPERATOR, ";");
+	}
+
+	{PointerVarDecl} {
+		std::string str(yytext);
+		size_t start = str.find_first_not_of(" \t");
+		size_t end = str.find_last_not_of(" \t");
+
+		if (start != std::string::npos && end != std::string::npos && start <= end) {
+			str = str.substr(start, end - start + 1);
+
+			// Busca la posición del primer asterisco
+			size_t asteriskPos = str.find('*');
+			if (asteriskPos != std::string::npos) {
+				// Extrae el tipo (todo antes del asterisco)
+				std::string type = str.substr(0, asteriskPos);
+				trimSpaces(type);  // Limpia los espacios adicionales en el tipo
+
+				// Extrae el nombre de la variable (todo después del asterisco)
+				std::string varName = str.substr(asteriskPos + 1);
+				trimSpaces(varName);  // Limpia los espacios adicionales en el nombre de la variable
+
+				// Categoriza el tipo y el identificador
+				if (isStandardType(type)) {
+					stats.category(SC::TYPE, type.c_str());
+				} else {
+					stats.category(SC::CUSTOMTYPE, type.c_str());
+				}
+				stats.category(SC::IDENTIFIER, varName.c_str());
+				stats.category(SC::OPERATOR, ";");
+			}
+		}
+	}
+
+	{InitVarDecl} {
+		std::string str(yytext);
+		size_t start = str.find_first_not_of(" \t");
+		size_t end = str.find_last_not_of(" \t");
+
+		// Verifica si los índices son válidos
+		if (start != std::string::npos && end != std::string::npos && start <= end) {
+			str = str.substr(start, end - start + 1);
+
+			// Busca la posición del igual
+			size_t equalPos = str.find('=');
+			if (equalPos != std::string::npos) {
+				str = str.substr(0, equalPos);
+				size_t spacePos = str.find_last_of(" \t");
+
+				if (spacePos != std::string::npos) {
+					// Extrae el tipo y el nombre de la variable
+					std::string type = str.substr(0, spacePos);
+					std::string varName = str.substr(spacePos + 1);
+
+					start = varName.find_first_not_of(" \t");
+					end = varName.find_last_not_of(" \t");
+
+					// Verifica si los índices son válidos
+					if (start != std::string::npos && end != std::string::npos && start <= end) {
+						varName = varName.substr(start, end - start + 1);
+
+						// Categoriza el tipo y el identificador
+						if (isStandardType(type)) {
+							stats.category(SC::TYPE, type.c_str());
+						} else {
+							stats.category(SC::CUSTOMTYPE, type.c_str());
+						}
+						stats.category(SC::IDENTIFIER, varName.c_str());
+					}
+				}
+			}
+		}
+		stats.category(SC::OPERATOR, "=");
+	}
+
+	{MultiVarDecl} {
+		std::string str(yytext);
+		trimSpaces(str);
+
+		// Encuentra la posición del primer espacio después del tipo común
+		size_t spacePos = str.find(' ');
+
+		// Extrae el tipo común a todas las variables
+		std::string type = str.substr(0, spacePos);
+		trimSpaces(type);
+
+		// Procesa cada variable individualmente
+		size_t startPos = spacePos + 1;
+		while (startPos < str.size()) {
+			size_t varEndPos = str.find_first_of(",;", startPos);
+			if (varEndPos == std::string::npos) {
+				varEndPos = str.size();
+			}
+
+			std::string varName = str.substr(startPos, varEndPos - startPos);
+			trimSpaces(varName);
+
+			// Categoriza el tipo y el identificador
+			if (isStandardType(type)) {
+				stats.category(SC::TYPE, type.c_str());
+			} else {
+				stats.category(SC::CUSTOMTYPE, type.c_str());
+			}
+			stats.category(SC::IDENTIFIER, varName.c_str());
+
+			startPos = varEndPos + 1;
+		}
+		stats.category(SC::OPERATOR, ";");
+	} */
+
   /***************** oneTBB Specific Keywords and Types *****************/
 {oneTBB_parallel_for}							{stats.category(SC::APIKEYWORD,yytext);}
 {oneTBB_prefix}parallel_reduce					{stats.category(SC::APIKEYWORD,yytext);}
@@ -552,14 +716,14 @@ get_platform									{stats.category(SC::APIKEYWORD,yytext);}
 wait											{stats.category(SC::APIKEYWORD,yytext);}
 
   /***************** Custom Types *****************/
-EnergyPCM										{stats.category(SC::CUSTOMTYPE,yytext);}
-ViVidItem										{stats.category(SC::CUSTOMTYPE,yytext);}
-Tracer											{stats.category(SC::CUSTOMTYPE,yytext);}
-ApplicationData									{stats.category(SC::CUSTOMTYPE,yytext);}
-InputArgs										{stats.category(SC::CUSTOMTYPE,yytext);}
-SyclEventInfo									{stats.category(SC::CUSTOMTYPE,yytext);}
-Acc												{stats.category(SC::CUSTOMTYPE,yytext);}
-circular_buffer									{stats.category(SC::CUSTOMTYPE,yytext);}
+	/* EnergyPCM										{stats.category(SC::CUSTOMTYPE,yytext);}
+	ViVidItem										{stats.category(SC::CUSTOMTYPE,yytext);}
+	Tracer											{stats.category(SC::CUSTOMTYPE,yytext);}
+	ApplicationData									{stats.category(SC::CUSTOMTYPE,yytext);}
+	InputArgs										{stats.category(SC::CUSTOMTYPE,yytext);}
+	SyclEventInfo									{stats.category(SC::CUSTOMTYPE,yytext);}
+	Acc												{stats.category(SC::CUSTOMTYPE,yytext);}
+	circular_buffer									{stats.category(SC::CUSTOMTYPE,yytext);} */
 
 
   /***************** Operator Handling *****************/
@@ -620,22 +784,21 @@ L?'(\\.|[^\\'])+'								{stats.category(SC::CONSTANT,yytext);}
 {D}*"."{D}+({E})?{FS}?							{stats.category(SC::CONSTANT,yytext);}
 {D}+"."{D}*({E})?{FS}?							{stats.category(SC::CONSTANT,yytext);}
 L?\"(\\.|[^\\"])*\"								{stats.category(SC::CONSTANT,yytext);/*STRING_LITERAL*/}
-  /***************** Function Call Handling *****************/
 
   /***************** Identifier Handling *****************/
 {L}({L}|{D})*									{
 	char next_char = yyinput();
+	std::string buffer = yytext;
 	if (next_char == '(') {
 		// Es una función
-		stats.category(SC::CUSTOMKEYWORD,yytext);
+		buffer += "()";
+		stats.category(SC::CUSTOMKEYWORD,buffer.c_str());
 	} else {
 		// Es un identificador
 		stats.category(SC::IDENTIFIER,yytext);
 		unput(next_char);
 	}
 }
-
-
 
   /***************** End of File Handling and Error Reporting *****************/
 .	{
