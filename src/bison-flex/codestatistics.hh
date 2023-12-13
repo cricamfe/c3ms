@@ -37,14 +37,8 @@ namespace c3ms
                 OPERATOR,       // Standard C++ operators
                 CONDITION,      // Standard C++ if, else, else if, switch, case, default
                 APIKEYWORD,     // API High Level
-                APITYPE,        // API High Level
-                APICONSTANT,    // API High Level
                 APILLKEYWORD,   // API Low Level
-                APILLTYPE,      // API Low Level
-                APILLCONSTANT,  // API Low Level
                 CUSTOMKEYWORD,  // Custom Keywords
-                CUSTOMCONSTANT, // Custom Constants
-                CUSTOMTYPE      // Custom Types
             };
 
             // Constructors and Destructor
@@ -107,14 +101,8 @@ namespace c3ms
             StatSize nOperators_ = 0;
             StatSize nConditions_ = 0;
             StatSize nAPIKeywords_ = 0;
-            StatSize nAPITypes_ = 0;
-            StatSize nAPIConstants_ = 0;
             StatSize nAPILLKeywords_ = 0;
-            StatSize nAPILLTypes_ = 0;
-            StatSize nAPILLConstants_ = 0;
             StatSize nCustomKeywords_ = 0;
-            StatSize nCustomTypes_ = 0;
-            StatSize nCustomConstants_ = 0;
 
             CSSet typesSet_;
             CSSet constantsSet_;
@@ -124,14 +112,8 @@ namespace c3ms
             CSSet operatorsSet_;
             CSSet conditionsSet_;
             CSSet apiKeywordsSet_;
-            CSSet apiTypesSet_;
-            CSSet apiConstantsSet_;
             CSSet apiLLKeywordsSet_;
-            CSSet apiLLTypesSet_;
-            CSSet apiLLConstantsSet_;
             CSSet customKeywordsSet_;
-            CSSet customTypesSet_;
-            CSSet customConstantsSet_;
 
             // Friends of CodeStatistics
             friend class CodeParser;
