@@ -33,33 +33,6 @@ typedef c3ms::CodeStatistics::StatsCategory SC;
 
 void trimSpaces(std::string& str);
 
-bool isStandardType(const std::string& type) {
-    static const std::set<std::string> standardTypes = {
-        // Tipos básicos
-        "int", "float", "double", "char", "long", "short", "bool", 
-        "wchar_t", "char16_t", "char32_t", "signed", "unsigned", 
-        "void", "auto", "size_t", "ptrdiff_t", "auto",
-
-        // Tipos desde C++17 y C++20
-        "std::byte", "std::any", "std::optional", "std::variant", 
-        "std::string_view", "std::span",
-
-        // Tipos de puntero inteligente
-        "std::unique_ptr", "std::shared_ptr", "std::weak_ptr",
-
-        // Tipos de contenedor
-        "std::array", "std::vector", "std::deque", "std::list", 
-        "std::forward_list", "std::set", "std::map", "std::multiset", 
-        "std::multimap", "std::unordered_set", "std::unordered_map", 
-        "std::unordered_multiset", "std::unordered_multimap",
-
-        // Otros tipos de la biblioteca estándar
-        "std::pair", "std::tuple", "std::function", "std::bitset",
-        "std::queue", "std::stack", "std::priority_queue"
-    };
-    return standardTypes.find(type) != standardTypes.end();
-}
-
 %}
 
 %option debug
@@ -101,37 +74,6 @@ oneTBB_flow_prefix				{oneTBB_prefix}flow::
 oneTBB_filter_mode				{oneTBB_prefix}filter_mode::
 oneTBB_parallel_for				parallel_for
 
-/* Nueva abreviación para declaraciones de tipo y variables */
-/* CppVarDecl        [a-zA-Z_][a-zA-Z_0-9]*\s*[*&]*\s+([*&\s]*[a-zA-Z_][a-zA-Z_0-9]*\s*(,|;|\{|\=))+ */
-
-SimpleVarDecl    				[a-zA-Z_][a-zA-Z_0-9]*[ \t]+[a-zA-Z_][a-zA-Z_0-9]*[ \t]*;
-PointerVarDecl   				[a-zA-Z_][a-zA-Z_0-9]*[ \t]*\*[ \t]*[a-zA-Z_][a-zA-Z_0-9]*[ \t]*;
-InitVarDecl      				[a-zA-Z_][a-zA-Z0-9_]*[ \t]+[a-zA-Z_][a-zA-Z0-9_]*[ \t]*=
-MultiVarDecl     				[a-zA-Z_][a-zA-Z_0-9]*[ \t]+([a-zA-Z_][a-zA-Z_0-9]*[ \t]*(,|;)[ \t]*)+
-
-/* Expresiones regulares */
-TypeModifier    	(const|volatile|signed|unsigned|short|long|int|float|double|char|wchar_t|bool|void|auto|size_t|ptrdiff_t)
-ComplexType     	([a-zA-Z_][a-zA-Z0-9_]*)
-TemplateType    	([a-zA-Z_][a-zA-Z0-9_]*<[^>]+>)
-TypeName        	(({TypeModifier}[ \t]+)*({ComplexType}|{TemplateType}))+([ \t]*\*[ \t]*|[ \t]*&[ \t]*)?({Array})?
-Pointer         	(\*[ \t]*)
-Reference       	(&[ \t]*)
-Array           	(\[[^\]]*\])?
-VariableName    	[a-zA-Z_][a-zA-Z0-9_]*
-VariableDecl    	({Pointer}|{Reference})?[ \t]*{VariableName}([ \t]*{Pointer}|[ \t]*{Reference})?([ \t]*{Array})?
-BracedInitList  	\{[^\}]*\}
-FloatLiteral    	[+-]?([0-9]*[.])?[0-9]+([eE][-+]?[0-9]+)?[fF]?
-VariableInit    	([ \t]*=[ \t]*(\{[^\}]*\}|{FloatLiteral}|[a-zA-Z_][a-zA-Z0-9_]*))?
-VariableDef     	{VariableDecl}{VariableInit}?
-VariableDefList 	{VariableDef}({Space}*,{Space}*{VariableDef})*
-ListInit        	{BracedInitList}
-ComplexInit     	\([^\)]*\)
-VariableDefListInit {VariableDecl}(({Space}*{VariableInit}({ListInit})?)|({Space}*{ComplexInit}))?({Space}*,{Space}*{VariableDecl}(({Space}*{VariableInit}({ListInit})?)|({Space}*{ComplexInit}))?)*
-TypeDeclaration 	{TypeName}{Space}+({VariableDefList}|{VariableDefListInit}){Space}*{VariableEnd}
-Space           	[ \t]+
-VariableEnd     	;
-
-
 %%
 
  /* The rules. */
@@ -164,52 +106,6 @@ printf[\t ]*\( {
         }
     }
 }
-
-	/* {TypeDeclaration} {
-		std::string declaration = yytext;
-		std::istringstream iss(declaration);
-		std::string word;
-		bool expectType = true;
-		while (iss >> word) {
-			// Comprobar si es un tipo conocido
-			if (expectType && (word == "int" || word == "float" || word == "unsigned" || word == "const" || word == "char")) {
-				std::cout << "Type: " << word << std::endl;
-				continue;
-			}
-
-			// Separar y procesar punteros o referencias
-			if (!word.empty() && (word.back() == '*' || word.back() == '&')) {
-				char ptrOrRef = word.back();
-				word.pop_back();
-				std::cout << "Pointer or Reference: " << ptrOrRef << std::endl;
-				if (!word.empty()) {
-					// Si queda algo en la palabra, es un tipo o nombre de variable
-					if (expectType) {
-						std::cout << "Custom Type: " << word << std::endl;
-					} else {
-						std::cout << "Variable: " << word << std::endl;
-					}
-				}
-				continue;
-			}
-
-			// Comprobar si es el final de una declaración o lista de variables
-			if (word.back() == ',' || word.back() == ';') {
-				expectType = (word.back() == ',');
-				word.pop_back();
-				std::cout << "Variable: " << word << std::endl;
-				continue;
-			}
-
-			// Si llegamos aquí, es un nombre de variable o un tipo personalizado
-			if (expectType) {
-				std::cout << "Custom Type: " << word << std::endl;
-				expectType = false;
-			} else {
-				std::cout << "Variable: " << word << std::endl;
-			}
-		}
-	} */
 
   /***************** Preprocessor Directives *****************/
 
@@ -522,10 +418,10 @@ std::[a-zA-Z_][a-zA-Z0-9_]* 					{stats.category(SC::TYPE,yytext);}
 flow_control									{stats.category(SC::TYPE,yytext);}
 
   /****************** oneTBB Parallel Algorithms *****************/
-parallel_invoke									{stats.category(SC::APIKEYWORD,yytext);stats.addCondition();}
-parallel_do										{stats.category(SC::APIKEYWORD,yytext);stats.addCondition();}
-parallel_sort									{stats.category(SC::APIKEYWORD,yytext);stats.addCondition();}
-parallel_for_each								{stats.category(SC::APIKEYWORD,yytext);stats.addCondition();}
+parallel_invoke									{stats.category(SC::APIKEYWORD,yytext);}
+parallel_do										{stats.category(SC::APIKEYWORD,yytext);}
+parallel_sort									{stats.category(SC::APIKEYWORD,yytext);}
+parallel_for_each								{stats.category(SC::APIKEYWORD,yytext);}
 enqueue											{stats.category(SC::APIKEYWORD,yytext);}
 execute											{stats.category(SC::APIKEYWORD,yytext);}
 wait_for_all									{stats.category(SC::APIKEYWORD,yytext);}
@@ -553,8 +449,8 @@ _mm(128|256|512)?_[a-zA-Z_][a-zA-Z0-9_]*\s*		{
 simd_t											{stats.category(SC::TYPE,yytext);}
 simd_i											{stats.category(SC::TYPE,yytext);}
 simd_f											{stats.category(SC::TYPE,yytext);}
-stdx::where										{stats.category(SC::APIKEYWORD,yytext);stats.decOperator();}
-stdx::reduce									{stats.category(SC::APIKEYWORD,yytext);stats.decOperator();}
+stdx::where										{stats.category(SC::APIKEYWORD,yytext);}
+stdx::reduce									{stats.category(SC::APIKEYWORD,yytext);}
 element_aligned									{stats.category(SC::APIKEYWORD,yytext);}
 stdx::[a-zA-Z_][a-zA-Z0-9_]*\s*\( 				{
 	// Remove the open parenthesis
@@ -661,17 +557,6 @@ create_sub_devices								{stats.category(SC::APIKEYWORD,yytext);}
 get_device										{stats.category(SC::APIKEYWORD,yytext);}
 get_platform									{stats.category(SC::APIKEYWORD,yytext);}
 wait											{stats.category(SC::APIKEYWORD,yytext);}
-
-  /***************** Custom Types *****************/
-	/* EnergyPCM										{stats.category(SC::TYPE,yytext);}
-	ViVidItem										{stats.category(SC::TYPE,yytext);}
-	Tracer											{stats.category(SC::TYPE,yytext);}
-	ApplicationData									{stats.category(SC::TYPE,yytext);}
-	InputArgs										{stats.category(SC::TYPE,yytext);}
-	SyclEventInfo									{stats.category(SC::TYPE,yytext);}
-	Acc												{stats.category(SC::TYPE,yytext);}
-	circular_buffer									{stats.category(SC::TYPE,yytext);} */
-
 
   /***************** Operator Handling *****************/
 "..."											{stats.category(SC::OPERATOR,yytext);}
