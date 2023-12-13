@@ -11,7 +11,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Opciones de compilación
 set(CMAKE_CXX_FLAGS_DEBUG "-Wall -Wextra -Werror -pedantic -g -DDEBUG=1 -Wno-unused-parameter")
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -Wextra -pedantic -Wno-unused-parameter")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -Wextra -pedantic -DDEBUG=0 -Wno-unused-parameter")
 
 # Definición de subdirectorios
 add_subdirectory(src/)
