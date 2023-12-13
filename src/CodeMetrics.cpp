@@ -10,7 +10,7 @@ MetricsCalculator::MetricsCalculator(const CodeStatistics& cs, const int lc)
       N2(cs.getOperands()), // Initialize total operands count
       n(n1 + n2), // Calculate total unique entities (operators + operands)
       N(N1 + N2), // Calculate total entities (operators + operands)
-      conditions(cs.getConds()), // Initialize conditional count
+      conditions(cs.getCounterValue(StatsCategory::CONDITION)), // Initialize conditional count
       linesOfCode(lc) // Set lines of code
 {
     calculateMetrics(); // Calculate all metrics upon initialization
@@ -28,7 +28,7 @@ void MetricsCalculator::calculateMetrics() {
 }
 
 // Method to report the calculated metrics
-void MetricsCalculator::report(int verbosity, const std::string& filePath, int loc, const CodeStatistics& cs) const {
+void MetricsCalculator::report(int verbosity, const std::string& filePath, int loc, CodeStatistics& cs) const {
     std::ostringstream reportStream; // Stream to build the report
     const int nameWidth = 45; // Column width for metric names
     const int valueWidth = 15; // Column width for metric values
@@ -65,16 +65,17 @@ void MetricsCalculator::report(int verbosity, const std::string& filePath, int l
     if (verbosity > 1) {
         // Additional statistics
         reportStream << "Additional Statistics:\n" << std::string(80, '-') << "\n";
-        reportStream << formatMetric("Types", cs.getTypes(), std::to_string(cs.getUniqueTypes()) + " unique")
-                     << formatMetric("Constants", cs.getConstants(), std::to_string(cs.getUniqueConstants()) + " unique")
-                     << formatMetric("Identifiers", cs.getIdentifiers(), std::to_string(cs.getUniqueIdentifiers()) + " unique")
-                     << formatMetric("Cspecs", cs.getCspecs(), std::to_string(cs.getUniqueCspecs()) + " unique")
-                     << formatMetric("Keywords", cs.getKeywords(), std::to_string(cs.getUniqueKeywords()) + " unique")
-                     << formatMetric("Function Call (API)", cs.getApiFunctionCalls(), std::to_string(cs.getUniqueApiFunctionCalls()) + " unique")
-                     << formatMetric("Function Call (Dev)", cs.getCustomFunctionCalls(), std::to_string(cs.getUniqueCustomFunctionCalls()) + " unique")
-                     << formatMetric("Operators", cs.getOps(), std::to_string(cs.getUniqueOps()) + " unique")
-                     << formatMetric("Operands", cs.getOperands(), std::to_string(cs.getUniqueOperands()) + " unique")
-                     << std::string(80, '-') << "\n";
+        reportStream << formatMetric("Types", cs.getCounterValue(StatsCategory::TYPE), std::to_string(cs.getCSSetSize(StatsCategory::TYPE)) + " unique")
+                        << formatMetric("Constants", cs.getCounterValue(StatsCategory::CONSTANT), std::to_string(cs.getCSSetSize(StatsCategory::CONSTANT)) + " unique")
+                        << formatMetric("Identifiers", cs.getCounterValue(StatsCategory::IDENTIFIER), std::to_string(cs.getCSSetSize(StatsCategory::IDENTIFIER)) + " unique")
+                        << formatMetric("Cspecs", cs.getCounterValue(StatsCategory::CSPECIFIER), std::to_string(cs.getCSSetSize(StatsCategory::CSPECIFIER)) + " unique")
+                        << formatMetric("Keywords", cs.getCounterValue(StatsCategory::KEYWORD), std::to_string(cs.getCSSetSize(StatsCategory::KEYWORD)) + " unique")
+                        << formatMetric("Keywords (API)", cs.getCounterValue(StatsCategory::APIKEYWORD), std::to_string(cs.getCSSetSize(StatsCategory::APIKEYWORD)) + " unique")
+                        << formatMetric("Keywords (API Low Level)", cs.getCounterValue(StatsCategory::APILLKEYWORD), std::to_string(cs.getCSSetSize(StatsCategory::APILLKEYWORD)) + " unique")
+                        << formatMetric("Keywords (Dev)", cs.getCounterValue(StatsCategory::CUSTOMKEYWORD), std::to_string(cs.getCSSetSize(StatsCategory::CUSTOMKEYWORD)) + " unique")
+                        << formatMetric("Operators", cs.getOperators(), std::to_string(cs.getUniqueOperators()) + " unique")
+                        << formatMetric("Operands", cs.getOperands(), std::to_string(cs.getUniqueOperands()) + " unique")
+                        << std::string(80, '-') << "\n";
     }
 
     // Output the final report

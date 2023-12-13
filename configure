@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+
+# Colores para los mensajes
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+NC='\033[0m' # Sin color
+
+# Mensajes de inicio
+echo -e "${YELLOW} -------------------------------------------${NC}"
+echo -e "${YELLOW}|                    C3MS                   |${NC}"
+echo -e "${YELLOW}|                  CONFIGURE                |${NC}"
+echo -e "${YELLOW} -------------------------------------------${NC}"
+
+# Función para llamar a CMake con los CFLAGS correctos
+call_CMake() {
+    mkdir -p build && cd build || return 1
+
+    if [ -z "$1" ]; then
+        cmake_cmd="cmake ../ -G\"Unix Makefiles\""
+    else
+        cmake_cmd="cmake ../ -DCMAKE_BUILD_TYPE=Debug -G\"Unix Makefiles\""
+    fi
+
+    if ! eval "$cmake_cmd"; then
+        echo -e "${RED}<< An error occurred while configuring >>${NC}"
+        echo -e "${RED}<<        Please, report this bug     >>${NC}"
+        return 1
+    fi
+
+    echo -e "${GREEN}<< Project is now ready to be built >>${NC}"
+    echo -e "${GREEN}<< Run 'make' to continue >>${NC}"
+}
+
+# Función para construir CFLAGS según los argumentos
+parse_opt() {
+    DEBUG=""
+
+    for i in "$@"; do
+        case $i in
+            "--with-debug")
+                DEBUG="YES";;
+            "--help")
+                print_usage
+                return;;
+            *)
+                print_usage
+                return;;
+        esac
+    done
+
+    call_CMake "${DEBUG}"
+}
+
+# Imprimir el uso del script de configuración
+print_usage() {
+    echo
+    echo "Configuring C3MS project"
+    echo "Usage: ./configure [--with-debug] [--help]"
+    echo "  All arguments are optional but if --help is given"
+    echo "the program exits, displaying this usage."
+    echo "  If no argument is passed, Makefile will be generated with"
+    echo "default CFLAGS and no debug mode."
+    echo "  You can pass as many arguments as you like."
+    echo
+    echo "--help       - Display this usage and exit program"
+    echo "--with-debug - Generate Makefile that will build the"
+    echo "               project with debug CFLAGS (-g)."
+    echo
+}
+
+# Analizar las opciones
+parse_opt "$@"
