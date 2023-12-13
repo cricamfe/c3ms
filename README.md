@@ -5,19 +5,21 @@
 ### Debug/Development Mode
 
 ```shell
-make DEBUG=1
+./configure --with-debug
+make
 ```
 
 ### Release Mode
 
 ```shell
+./configure
 make
 ```
 
 ### Usage
 
 ```shell
-./c3ms [-h] [-f] [-a] [-g] [-v level] <files>
+./C3MS [-h] [-f] [-a] [-g] [-v level] <files>
 ```
 
 ### Description 
@@ -26,8 +28,8 @@ The `c3ms` tool calculates Halstead's programming effort and various complexity 
 
 #### Criteria for Tokens
 
-- **Operands**: Constants, basic types (int, float, etc.), and identifiers.
-- **Operators**: Storage and type modifiers (const, static, etc.), language keywords, and operators.
+- **Operands**: Constants, types (int, float, etc.), identifiers, C specifiers and API (high level) keywords like oneTBB, SYCL, etc.
+- **Operators**: Language keywords, API (low level) keywords and custom keywords from developer and operators.
 
 Additionally, the tool outputs Halstead's volume and counts the number of conditional statements, including `case`, `default`, `for`, `if`, and `while`.
 
@@ -50,15 +52,17 @@ Additionally, the tool outputs Halstead's volume and counts the number of condit
 
 In 2023, updates and improvements have been made to the library. Key improvements include:
 
-- A complete restructuring of the project, introducing a new directory structure (`bin`, `src`, `include`, `obj`, etc.) and an updated Makefile that supports both `RELEASE` and `DEBUG versions`.
+- A complete restructuring of the project, introducing a new directory structure (`src`, `test`, `docs`, etc.) and an updated CMakeLists files that supports both `RELEASE` and `DEBUG` versions.
 - Expansion of the lexicon to incorporate modern programming concepts and technologies such as `C++`, `SYCL`, `oneTBB`, `AVX2`, `SIMD`, etc.
-- Refinement of the `CodeStatistics` component using `string_view` to improve performance.
+- Enhanced the tool's capability to automatically process functions developed by the programmer, which are not derived from any API. This significantly improves the detection and analysis of operators within the code.
+- Refinement of the `CodeStatistics` component, the implementation of which has been moved to `codestatistics.hh` and `codestatistics.cc`.
 - Introduction of new metrics such as `cyclomatic complexity`, `maintainability index`, `time required` and `bugs delivered`.
-- Improved parsing capabilities, allowing files to be broken down into functions using flags such as `--function-metrics`, `--file-metrics` and `--global-metrics`.
+- Improved parsing capabilities, allowing files to be broken down into functions using flags such as `--function-metrics`(-f), `--file-metrics`(-a) and `--global-metrics`(-g).
 - Improved presentation of results with colour-coded output and tabular formats.
 - Development of new `CodeUtils` and `CodeMetrics` files for centralized metric calculations and utility functions.
-- Redistribution of functions from `c3ms.cpp` into these new support files.
+- Redistribution of functions from `main.cpp` into these new support files.
 - General refactoring of the original code by Basilio B. Fraguela (2009-2010) to take advantage of new C++ features and add additional functions.
+- The project structure has been generated using the [template](https://github.com/remusao/Bison-Flex-CPP-template) created by remusao, which incorporates the latest versions of Flex and Bison in C++. This approach ensures modern, efficient parsing and lexing capabilities within the project.
 
 These updates are intended to significantly increase the performance, usability and analytical capabilities of the library.
 
