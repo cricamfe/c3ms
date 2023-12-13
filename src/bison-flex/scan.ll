@@ -10,6 +10,7 @@
 #include <cctype>
 #include <algorithm>
 #include <set>
+#include <regex>
 
 /*  Defines some macros to update locations */
 #define STEP()			yylloc->step();
@@ -103,10 +104,33 @@ oneTBB_parallel_for				parallel_for
 /* Nueva abreviación para declaraciones de tipo y variables */
 /* CppVarDecl        [a-zA-Z_][a-zA-Z_0-9]*\s*[*&]*\s+([*&\s]*[a-zA-Z_][a-zA-Z_0-9]*\s*(,|;|\{|\=))+ */
 
-SimpleVarDecl    [a-zA-Z_][a-zA-Z_0-9]*[ \t]+[a-zA-Z_][a-zA-Z_0-9]*[ \t]*;
-PointerVarDecl   [a-zA-Z_][a-zA-Z_0-9]*[ \t]*\*[ \t]*[a-zA-Z_][a-zA-Z_0-9]*[ \t]*;
-InitVarDecl      [a-zA-Z_][a-zA-Z0-9_]*[ \t]+[a-zA-Z_][a-zA-Z0-9_]*[ \t]*=
-MultiVarDecl     [a-zA-Z_][a-zA-Z_0-9]*[ \t]+([a-zA-Z_][a-zA-Z_0-9]*[ \t]*(,|;)[ \t]*)+
+SimpleVarDecl    				[a-zA-Z_][a-zA-Z_0-9]*[ \t]+[a-zA-Z_][a-zA-Z_0-9]*[ \t]*;
+PointerVarDecl   				[a-zA-Z_][a-zA-Z_0-9]*[ \t]*\*[ \t]*[a-zA-Z_][a-zA-Z_0-9]*[ \t]*;
+InitVarDecl      				[a-zA-Z_][a-zA-Z0-9_]*[ \t]+[a-zA-Z_][a-zA-Z0-9_]*[ \t]*=
+MultiVarDecl     				[a-zA-Z_][a-zA-Z_0-9]*[ \t]+([a-zA-Z_][a-zA-Z_0-9]*[ \t]*(,|;)[ \t]*)+
+
+/* Expresiones regulares */
+TypeModifier    	(const|volatile|signed|unsigned|short|long|int|float|double|char|wchar_t|bool|void|auto|size_t|ptrdiff_t)
+ComplexType     	([a-zA-Z_][a-zA-Z0-9_]*)
+TemplateType    	([a-zA-Z_][a-zA-Z0-9_]*<[^>]+>)
+TypeName        	(({TypeModifier}[ \t]+)*({ComplexType}|{TemplateType}))+([ \t]*\*[ \t]*|[ \t]*&[ \t]*)?({Array})?
+Pointer         	(\*[ \t]*)
+Reference       	(&[ \t]*)
+Array           	(\[[^\]]*\])?
+VariableName    	[a-zA-Z_][a-zA-Z0-9_]*
+VariableDecl    	({Pointer}|{Reference})?[ \t]*{VariableName}([ \t]*{Pointer}|[ \t]*{Reference})?([ \t]*{Array})?
+BracedInitList  	\{[^\}]*\}
+FloatLiteral    	[+-]?([0-9]*[.])?[0-9]+([eE][-+]?[0-9]+)?[fF]?
+VariableInit    	([ \t]*=[ \t]*(\{[^\}]*\}|{FloatLiteral}|[a-zA-Z_][a-zA-Z0-9_]*))?
+VariableDef     	{VariableDecl}{VariableInit}?
+VariableDefList 	{VariableDef}({Space}*,{Space}*{VariableDef})*
+ListInit        	{BracedInitList}
+ComplexInit     	\([^\)]*\)
+VariableDefListInit {VariableDecl}(({Space}*{VariableInit}({ListInit})?)|({Space}*{ComplexInit}))?({Space}*,{Space}*{VariableDecl}(({Space}*{VariableInit}({ListInit})?)|({Space}*{ComplexInit}))?)*
+TypeDeclaration 	{TypeName}{Space}+({VariableDefList}|{VariableDefListInit}){Space}*{VariableEnd}
+Space           	[ \t]+
+VariableEnd     	;
+
 
 %%
 
@@ -141,6 +165,52 @@ printf[\t ]*\( {
     }
 }
 
+	/* {TypeDeclaration} {
+		std::string declaration = yytext;
+		std::istringstream iss(declaration);
+		std::string word;
+		bool expectType = true;
+		while (iss >> word) {
+			// Comprobar si es un tipo conocido
+			if (expectType && (word == "int" || word == "float" || word == "unsigned" || word == "const" || word == "char")) {
+				std::cout << "Type: " << word << std::endl;
+				continue;
+			}
+
+			// Separar y procesar punteros o referencias
+			if (!word.empty() && (word.back() == '*' || word.back() == '&')) {
+				char ptrOrRef = word.back();
+				word.pop_back();
+				std::cout << "Pointer or Reference: " << ptrOrRef << std::endl;
+				if (!word.empty()) {
+					// Si queda algo en la palabra, es un tipo o nombre de variable
+					if (expectType) {
+						std::cout << "Custom Type: " << word << std::endl;
+					} else {
+						std::cout << "Variable: " << word << std::endl;
+					}
+				}
+				continue;
+			}
+
+			// Comprobar si es el final de una declaración o lista de variables
+			if (word.back() == ',' || word.back() == ';') {
+				expectType = (word.back() == ',');
+				word.pop_back();
+				std::cout << "Variable: " << word << std::endl;
+				continue;
+			}
+
+			// Si llegamos aquí, es un nombre de variable o un tipo personalizado
+			if (expectType) {
+				std::cout << "Custom Type: " << word << std::endl;
+				expectType = false;
+			} else {
+				std::cout << "Variable: " << word << std::endl;
+			}
+		}
+	} */
+
   /***************** Preprocessor Directives *****************/
 
 "#"[ \t]*"define"                                { stats.category(SC::KEYWORD, "define"); }
@@ -171,7 +241,7 @@ printf[\t ]*\( {
     }
 	// Categoriza la keyword y el contenido
 	stats.category(SC::KEYWORD, "if constexpr");
-    stats.category(SC::CUSTOMCONSTANT, content.c_str());
+    stats.category(SC::CONSTANT, content.c_str());
 }
 
 
@@ -362,7 +432,6 @@ vector    										{stats.category(SC::TYPE,yytext);}
     }
 }
 
-
   /***************** C++14, C++17, C++20 Specific Features *****************/
 alignas											{stats.category(SC::KEYWORD,yytext);}
 alignof											{stats.category(SC::KEYWORD,yytext);}
@@ -389,136 +458,10 @@ std::[a-zA-Z_][a-zA-Z0-9_]*\s*\( 				{
 	// Print buffer
 	printf("%s\n", buffer.c_str());
 }
-
 std::[a-zA-Z_][a-zA-Z0-9_]* 					{stats.category(SC::TYPE,yytext);}	
 
-  /***************** C++ Custom Types *****************/
-
-	/* {SimpleVarDecl} {
-		std::string str(yytext);
-		size_t start = str.find_first_not_of(" \t");
-		size_t end = str.find_last_not_of(" \t");
-		str = str.substr(start, end - start + 1);
-		size_t spacePos = str.find_last_of(" \t");
-		std::string type = str.substr(0, spacePos);
-		std::string varName = str.substr(spacePos + 1);
-		if (isStandardType(type)) {
-			stats.category(SC::TYPE, type.c_str());
-		} else {
-			stats.category(SC::CUSTOMTYPE, type.c_str());
-		}
-		stats.category(SC::IDENTIFIER, varName.c_str());
-		stats.category(SC::OPERATOR, ";");
-	}
-
-	{PointerVarDecl} {
-		std::string str(yytext);
-		size_t start = str.find_first_not_of(" \t");
-		size_t end = str.find_last_not_of(" \t");
-
-		if (start != std::string::npos && end != std::string::npos && start <= end) {
-			str = str.substr(start, end - start + 1);
-
-			// Busca la posición del primer asterisco
-			size_t asteriskPos = str.find('*');
-			if (asteriskPos != std::string::npos) {
-				// Extrae el tipo (todo antes del asterisco)
-				std::string type = str.substr(0, asteriskPos);
-				trimSpaces(type);  // Limpia los espacios adicionales en el tipo
-
-				// Extrae el nombre de la variable (todo después del asterisco)
-				std::string varName = str.substr(asteriskPos + 1);
-				trimSpaces(varName);  // Limpia los espacios adicionales en el nombre de la variable
-
-				// Categoriza el tipo y el identificador
-				if (isStandardType(type)) {
-					stats.category(SC::TYPE, type.c_str());
-				} else {
-					stats.category(SC::CUSTOMTYPE, type.c_str());
-				}
-				stats.category(SC::IDENTIFIER, varName.c_str());
-				stats.category(SC::OPERATOR, ";");
-			}
-		}
-	}
-
-	{InitVarDecl} {
-		std::string str(yytext);
-		size_t start = str.find_first_not_of(" \t");
-		size_t end = str.find_last_not_of(" \t");
-
-		// Verifica si los índices son válidos
-		if (start != std::string::npos && end != std::string::npos && start <= end) {
-			str = str.substr(start, end - start + 1);
-
-			// Busca la posición del igual
-			size_t equalPos = str.find('=');
-			if (equalPos != std::string::npos) {
-				str = str.substr(0, equalPos);
-				size_t spacePos = str.find_last_of(" \t");
-
-				if (spacePos != std::string::npos) {
-					// Extrae el tipo y el nombre de la variable
-					std::string type = str.substr(0, spacePos);
-					std::string varName = str.substr(spacePos + 1);
-
-					start = varName.find_first_not_of(" \t");
-					end = varName.find_last_not_of(" \t");
-
-					// Verifica si los índices son válidos
-					if (start != std::string::npos && end != std::string::npos && start <= end) {
-						varName = varName.substr(start, end - start + 1);
-
-						// Categoriza el tipo y el identificador
-						if (isStandardType(type)) {
-							stats.category(SC::TYPE, type.c_str());
-						} else {
-							stats.category(SC::CUSTOMTYPE, type.c_str());
-						}
-						stats.category(SC::IDENTIFIER, varName.c_str());
-					}
-				}
-			}
-		}
-		stats.category(SC::OPERATOR, "=");
-	}
-
-	{MultiVarDecl} {
-		std::string str(yytext);
-		trimSpaces(str);
-
-		// Encuentra la posición del primer espacio después del tipo común
-		size_t spacePos = str.find(' ');
-
-		// Extrae el tipo común a todas las variables
-		std::string type = str.substr(0, spacePos);
-		trimSpaces(type);
-
-		// Procesa cada variable individualmente
-		size_t startPos = spacePos + 1;
-		while (startPos < str.size()) {
-			size_t varEndPos = str.find_first_of(",;", startPos);
-			if (varEndPos == std::string::npos) {
-				varEndPos = str.size();
-			}
-
-			std::string varName = str.substr(startPos, varEndPos - startPos);
-			trimSpaces(varName);
-
-			// Categoriza el tipo y el identificador
-			if (isStandardType(type)) {
-				stats.category(SC::TYPE, type.c_str());
-			} else {
-				stats.category(SC::CUSTOMTYPE, type.c_str());
-			}
-			stats.category(SC::IDENTIFIER, varName.c_str());
-
-			startPos = varEndPos + 1;
-		}
-		stats.category(SC::OPERATOR, ";");
-	} */
-
   /***************** oneTBB Specific Keywords and Types *****************/
+{oneTBB_prefix}									{stats.category(SC::APIKEYWORD,yytext);}
 {oneTBB_parallel_for}							{stats.category(SC::APIKEYWORD,yytext);}
 {oneTBB_prefix}parallel_reduce					{stats.category(SC::APIKEYWORD,yytext);}
 {oneTBB_prefix}parallel_scan					{stats.category(SC::APIKEYWORD,yytext);}
@@ -526,19 +469,20 @@ std::[a-zA-Z_][a-zA-Z0-9_]* 					{stats.category(SC::TYPE,yytext);}
 {oneTBB_prefix}flow_graph						{stats.category(SC::APIKEYWORD,yytext);}
 {oneTBB_prefix}task_group						{stats.category(SC::APIKEYWORD,yytext);}
 {oneTBB_prefix}task_arena						{stats.category(SC::APIKEYWORD,yytext);}
-{oneTBB_prefix}blocked_range					{stats.category(SC::APITYPE,yytext);}
-{oneTBB_prefix}blocked_range2d					{stats.category(SC::APITYPE,yytext);}
-{oneTBB_prefix}blocked_range3d					{stats.category(SC::APITYPE,yytext);}	
-{oneTBB_prefix}concurrent_vector				{stats.category(SC::APITYPE,yytext);}
-{oneTBB_prefix}concurrent_queue					{stats.category(SC::APITYPE,yytext);}
-{oneTBB_prefix}concurrent_bounded_queue			{stats.category(SC::APITYPE,yytext);}
-{oneTBB_prefix}concurrent_priority_queue		{stats.category(SC::APITYPE,yytext);}
-{oneTBB_prefix}concurrent_hash_map				{stats.category(SC::APITYPE,yytext);}
-{oneTBB_prefix}concurrent_unordered_map			{stats.category(SC::APITYPE,yytext);}
-{oneTBB_prefix}concurrent_unordered_set			{stats.category(SC::APITYPE,yytext);}
-{oneTBB_prefix}combinable						{stats.category(SC::APITYPE,yytext);}
-{oneTBB_prefix}enumerable_thread_specific		{stats.category(SC::APITYPE,yytext);}
-{oneTBB_prefix}global_control::max_allowed_parallelism	{stats.category(SC::APICONSTANT,yytext);}
+{oneTBB_prefix}blocked_range					{stats.category(SC::TYPE,yytext);}
+{oneTBB_prefix}blocked_range2d					{stats.category(SC::TYPE,yytext);}
+{oneTBB_prefix}blocked_range3d					{stats.category(SC::TYPE,yytext);}	
+{oneTBB_prefix}concurrent_vector				{stats.category(SC::TYPE,yytext);}
+{oneTBB_prefix}concurrent_queue					{stats.category(SC::TYPE,yytext);}
+{oneTBB_prefix}concurrent_bounded_queue			{stats.category(SC::TYPE,yytext);}
+{oneTBB_prefix}concurrent_priority_queue		{stats.category(SC::TYPE,yytext);}
+{oneTBB_prefix}concurrent_hash_map				{stats.category(SC::TYPE,yytext);}
+{oneTBB_prefix}concurrent_unordered_map			{stats.category(SC::TYPE,yytext);}
+{oneTBB_prefix}concurrent_unordered_set			{stats.category(SC::TYPE,yytext);}
+{oneTBB_prefix}combinable						{stats.category(SC::TYPE,yytext);}
+{oneTBB_prefix}enumerable_thread_specific		{stats.category(SC::TYPE,yytext);}
+{oneTBB_prefix}global_control					{stats.category(SC::TYPE,yytext);}
+{oneTBB_prefix}global_control::max_allowed_parallelism	{stats.category(SC::CONSTANT,yytext);}
 
   /***************** oneTBB Synchronization and Functions *****************/
 {oneTBB_prefix}spin_mutex						{stats.category(SC::APIKEYWORD,yytext);}
@@ -549,31 +493,33 @@ std::[a-zA-Z_][a-zA-Z0-9_]* 					{stats.category(SC::TYPE,yytext);}
 {oneTBB_prefix}reader_writer_lock				{stats.category(SC::APIKEYWORD,yytext);}
 
   /***************** oneTBB Parallel Pipeline and Task Graph Creation *****************/
-make_filter										{stats.category(SC::APIKEYWORD,yytext);}
+{oneTBB_prefix}make_filter						{stats.category(SC::APIKEYWORD,yytext);}
 {oneTBB_filter_mode}parallel					{stats.category(SC::APIKEYWORD,yytext);}
 {oneTBB_filter_mode}serial_out_of_order			{stats.category(SC::APIKEYWORD,yytext);}
+{oneTBB_filter_mode}serial_in_order				{stats.category(SC::APIKEYWORD,yytext);}
 {oneTBB_flow_prefix}make_edge					{stats.category(SC::APIKEYWORD,yytext);}
 {oneTBB_flow_prefix}input_port					{stats.category(SC::APIKEYWORD,yytext);}
 {oneTBB_flow_prefix}output_port					{stats.category(SC::APIKEYWORD,yytext);}
 {oneTBB_flow_prefix}remove_edge					{stats.category(SC::APIKEYWORD,yytext);}
-{oneTBB_flow_prefix}continue_node				{stats.category(SC::APITYPE,yytext);}
-{oneTBB_flow_prefix}function_node				{stats.category(SC::APITYPE,yytext);}
-{oneTBB_flow_prefix}broadcast_node				{stats.category(SC::APITYPE,yytext);}
-{oneTBB_flow_prefix}join_node					{stats.category(SC::APITYPE,yytext);}
-{oneTBB_flow_prefix}split_node					{stats.category(SC::APITYPE,yytext);}
-{oneTBB_flow_prefix}overwrite_node				{stats.category(SC::APITYPE,yytext);}
-{oneTBB_flow_prefix}write_once_node				{stats.category(SC::APITYPE,yytext);}
-{oneTBB_flow_prefix}sequencer_node				{stats.category(SC::APITYPE,yytext);}
-{oneTBB_flow_prefix}limiter_node				{stats.category(SC::APITYPE,yytext);}
-{oneTBB_flow_prefix}source_node					{stats.category(SC::APITYPE,yytext);}
-{oneTBB_flow_prefix}priority_queue_node			{stats.category(SC::APITYPE,yytext);}
-{oneTBB_flow_prefix}buffer_node					{stats.category(SC::APITYPE,yytext);}
-{oneTBB_flow_prefix}async_node					{stats.category(SC::APITYPE,yytext);}
-{oneTBB_flow_prefix}indexer_node				{stats.category(SC::APITYPE,yytext);}
-{oneTBB_flow_prefix}input_node					{stats.category(SC::APITYPE,yytext);}
-{oneTBB_flow_prefix}output_node					{stats.category(SC::APITYPE,yytext);}
-{oneTBB_flow_prefix}multifunction_node			{stats.category(SC::APITYPE,yytext);}
-{oneTBB_flow_prefix}graph						{stats.category(SC::APITYPE,yytext);}
+{oneTBB_flow_prefix}continue_node				{stats.category(SC::TYPE,yytext);}
+{oneTBB_flow_prefix}function_node				{stats.category(SC::TYPE,yytext);}
+{oneTBB_flow_prefix}broadcast_node				{stats.category(SC::TYPE,yytext);}
+{oneTBB_flow_prefix}join_node					{stats.category(SC::TYPE,yytext);}
+{oneTBB_flow_prefix}split_node					{stats.category(SC::TYPE,yytext);}
+{oneTBB_flow_prefix}overwrite_node				{stats.category(SC::TYPE,yytext);}
+{oneTBB_flow_prefix}write_once_node				{stats.category(SC::TYPE,yytext);}
+{oneTBB_flow_prefix}sequencer_node				{stats.category(SC::TYPE,yytext);}
+{oneTBB_flow_prefix}limiter_node				{stats.category(SC::TYPE,yytext);}
+{oneTBB_flow_prefix}source_node					{stats.category(SC::TYPE,yytext);}
+{oneTBB_flow_prefix}priority_queue_node			{stats.category(SC::TYPE,yytext);}
+{oneTBB_flow_prefix}buffer_node					{stats.category(SC::TYPE,yytext);}
+{oneTBB_flow_prefix}async_node					{stats.category(SC::TYPE,yytext);}
+{oneTBB_flow_prefix}indexer_node				{stats.category(SC::TYPE,yytext);}
+{oneTBB_flow_prefix}input_node					{stats.category(SC::TYPE,yytext);}
+{oneTBB_flow_prefix}output_node					{stats.category(SC::TYPE,yytext);}
+{oneTBB_flow_prefix}multifunction_node			{stats.category(SC::TYPE,yytext);}
+{oneTBB_flow_prefix}graph						{stats.category(SC::TYPE,yytext);}
+flow_control									{stats.category(SC::TYPE,yytext);}
 
   /****************** oneTBB Parallel Algorithms *****************/
 parallel_invoke									{stats.category(SC::APIKEYWORD,yytext);stats.addCondition();}
@@ -585,16 +531,17 @@ execute											{stats.category(SC::APIKEYWORD,yytext);}
 wait_for_all									{stats.category(SC::APIKEYWORD,yytext);}
 reserve_wait									{stats.category(SC::APIKEYWORD,yytext);}
 try_put											{stats.category(SC::APIKEYWORD,yytext);}
+stop											{stats.category(SC::APIKEYWORD,yytext);}
 release_wait									{stats.category(SC::APIKEYWORD,yytext);}
 {oneTBB_prefix}reserving						{stats.category(SC::APIKEYWORD,yytext);}
 {oneTBB_prefix}unlimited						{stats.category(SC::APIKEYWORD,yytext);}
 
   /***************** oneTBB Tick Count *****************/
-{oneTBB_prefix}tick_count						{stats.category(SC::APITYPE,yytext);}
+{oneTBB_prefix}tick_count						{stats.category(SC::TYPE,yytext);}
 {oneTBB_prefix}tick_count::now					{stats.category(SC::APIKEYWORD,yytext);}
 
   /***************** AVX Specific Types and Functions *****************/
-__m(128|256|512)[di]?							{stats.category(SC::APILLTYPE,yytext);}
+__m(128|256|512)[di]?							{stats.category(SC::TYPE,yytext);}
 _mm(128|256|512)?_[a-zA-Z_][a-zA-Z0-9_]*\s*		{
 	// Remove the open parenthesis
 	std::string buffer = yytext;
@@ -603,9 +550,9 @@ _mm(128|256|512)?_[a-zA-Z_][a-zA-Z0-9_]*\s*		{
 }
 
   /***************** SIMD Specific Types and Functions *****************/
-simd_t											{stats.category(SC::APITYPE,yytext);}
-simd_i											{stats.category(SC::APITYPE,yytext);}
-simd_f											{stats.category(SC::APITYPE,yytext);}
+simd_t											{stats.category(SC::TYPE,yytext);}
+simd_i											{stats.category(SC::TYPE,yytext);}
+simd_f											{stats.category(SC::TYPE,yytext);}
 stdx::where										{stats.category(SC::APIKEYWORD,yytext);stats.decOperator();}
 stdx::reduce									{stats.category(SC::APIKEYWORD,yytext);stats.decOperator();}
 element_aligned									{stats.category(SC::APIKEYWORD,yytext);}
@@ -654,7 +601,7 @@ stdx::[a-zA-Z_][a-zA-Z0-9_]*\s*\( 				{
             trimSpaces(type_param);
 
             // Añadir el tipo
-            stats.category(SC::APITYPE, type_name);
+            stats.category(SC::TYPE, type_name);
 
             // Comprobar si el parámetro es un número o un identificador
             if (std::all_of(type_param.begin(), type_param.end(), ::isdigit)) {
@@ -664,7 +611,7 @@ stdx::[a-zA-Z_][a-zA-Z0-9_]*\s*\( 				{
             }
         } else {
             // Solo es un tipo sin parámetros <>
-            stats.category(SC::APITYPE, sycl_combined);
+            stats.category(SC::TYPE, sycl_combined);
         }
 		unput(next_char);
     }
@@ -681,23 +628,23 @@ stdx::[a-zA-Z_][a-zA-Z0-9_]*\s*\( 				{
 }
 
   /***************** SYCL Types *****************/
-handler											{stats.category(SC::APITYPE,yytext);}
-id												{stats.category(SC::APITYPE,yytext);}
-event											{stats.category(SC::APITYPE,yytext);}
-range											{stats.category(SC::APITYPE,yytext);}
-accessor										{stats.category(SC::APITYPE,yytext);}
-device											{stats.category(SC::APITYPE,yytext);}
-platform										{stats.category(SC::APITYPE,yytext);}
-context											{stats.category(SC::APITYPE,yytext);}
-nd_range										{stats.category(SC::APITYPE,yytext);}
-buffer											{stats.category(SC::APITYPE,yytext);}
-queue											{stats.category(SC::APITYPE,yytext);}
-property_list									{stats.category(SC::APITYPE,yytext);}
-backend											{stats.category(SC::APITYPE,yytext);}
-property										{stats.category(SC::APITYPE,yytext);}
-device											{stats.category(SC::APITYPE,yytext);}
-info											{stats.category(SC::APITYPE,yytext);}
-local_accessor									{stats.category(SC::APITYPE,yytext);}
+handler											{stats.category(SC::TYPE,yytext);}
+id												{stats.category(SC::TYPE,yytext);}
+event											{stats.category(SC::TYPE,yytext);}
+range											{stats.category(SC::TYPE,yytext);}
+accessor										{stats.category(SC::TYPE,yytext);}
+device											{stats.category(SC::TYPE,yytext);}
+platform										{stats.category(SC::TYPE,yytext);}
+context											{stats.category(SC::TYPE,yytext);}
+nd_range										{stats.category(SC::TYPE,yytext);}
+buffer											{stats.category(SC::TYPE,yytext);}
+queue											{stats.category(SC::TYPE,yytext);}
+property_list									{stats.category(SC::TYPE,yytext);}
+backend											{stats.category(SC::TYPE,yytext);}
+property										{stats.category(SC::TYPE,yytext);}
+device											{stats.category(SC::TYPE,yytext);}
+info											{stats.category(SC::TYPE,yytext);}
+local_accessor									{stats.category(SC::TYPE,yytext);}
 
   /***************** SYCL Function Calls ***************/
 get_nd_range									{stats.category(SC::APIKEYWORD,yytext);}
@@ -716,14 +663,14 @@ get_platform									{stats.category(SC::APIKEYWORD,yytext);}
 wait											{stats.category(SC::APIKEYWORD,yytext);}
 
   /***************** Custom Types *****************/
-	/* EnergyPCM										{stats.category(SC::CUSTOMTYPE,yytext);}
-	ViVidItem										{stats.category(SC::CUSTOMTYPE,yytext);}
-	Tracer											{stats.category(SC::CUSTOMTYPE,yytext);}
-	ApplicationData									{stats.category(SC::CUSTOMTYPE,yytext);}
-	InputArgs										{stats.category(SC::CUSTOMTYPE,yytext);}
-	SyclEventInfo									{stats.category(SC::CUSTOMTYPE,yytext);}
-	Acc												{stats.category(SC::CUSTOMTYPE,yytext);}
-	circular_buffer									{stats.category(SC::CUSTOMTYPE,yytext);} */
+	/* EnergyPCM										{stats.category(SC::TYPE,yytext);}
+	ViVidItem										{stats.category(SC::TYPE,yytext);}
+	Tracer											{stats.category(SC::TYPE,yytext);}
+	ApplicationData									{stats.category(SC::TYPE,yytext);}
+	InputArgs										{stats.category(SC::TYPE,yytext);}
+	SyclEventInfo									{stats.category(SC::TYPE,yytext);}
+	Acc												{stats.category(SC::TYPE,yytext);}
+	circular_buffer									{stats.category(SC::TYPE,yytext);} */
 
 
   /***************** Operator Handling *****************/
@@ -791,7 +738,6 @@ L?\"(\\.|[^\\"])*\"								{stats.category(SC::CONSTANT,yytext);/*STRING_LITERAL
 	std::string buffer = yytext;
 	if (next_char == '(') {
 		// Es una función
-		buffer += "()";
 		stats.category(SC::CUSTOMKEYWORD,buffer.c_str());
 	} else {
 		// Es un identificador
