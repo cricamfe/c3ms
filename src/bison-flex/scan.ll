@@ -351,8 +351,6 @@ std::[a-zA-Z_][a-zA-Z0-9_]*\s*\( 				{
 	buffer.erase(buffer.size() - 1);
 	stats.category(SC::KEYWORD, buffer);
 	stats.category(SC::OPERATOR, "(");
-	// Print buffer
-	printf("%s\n", buffer.c_str());
 }
 std::[a-zA-Z_][a-zA-Z0-9_]* 					{stats.category(SC::TYPE,yytext);}	
 
@@ -458,8 +456,6 @@ stdx::[a-zA-Z_][a-zA-Z0-9_]*\s*\( 				{
 	buffer.erase(buffer.size() - 1);
 	stats.category(SC::APIKEYWORD, buffer);
 	stats.category(SC::OPERATOR, "(");
-	// Print buffer
-	printf("%s\n", buffer.c_str());
 }
 
   /***************** SYCL Specific Types, Keywords and Functions *****************/
