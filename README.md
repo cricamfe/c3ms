@@ -127,7 +127,7 @@ make
 - Enhanced parsing capabilities and introduction of new metrics.
 - Overall improvement in performance and usability.
 
-Full details of the 2023 updates can be found [here](#).
+Full details of the 2023 updates can be found [here](https://github.com/cricamfe/c3ms/releases).
 
 ## FAQs/Troubleshooting
 
