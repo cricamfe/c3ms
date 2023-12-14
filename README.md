@@ -1,8 +1,29 @@
+
 # c3ms: Halstead's Effort and Complexity Metrics Calculator
+
+**c3ms** is a comprehensive tool for calculating Halstead's programming effort and various complexity metrics. It analyzes the token composition in code files, providing valuable insights into your software's complexity and maintainability.
+
+## Table of Contents
+
+- [Installation](#installation)
+  - [Debug/Development Mode](#debugdevelopment-mode)
+  - [Release Mode](#release-mode)
+- [Usage](#usage)
+- [Description](#description)
+- [Options](#options)
+- [Usage Guide](#usage-guide)
+- [Updates and Contributions](#updates-and-contributions)
+- [FAQs/Troubleshooting](#faqstroubleshooting)
+- [License](#license)
+- [Acknowledgments](#acknowledgments)
 
 ## Installation
 
+**Prerequisites**: Ensure that your system meets the required dependencies before installation. 
+
 ### Debug/Development Mode
+
+For developers and contributors:
 
 ```shell
 ./configure --with-debug
@@ -11,61 +32,113 @@ make
 
 ### Release Mode
 
+For standard installation:
+
 ```shell
 ./configure
 make
 ```
 
-### Usage
+## Usage
+
+To get started:
 
 ```shell
 ./C3MS [-h] [-f] [-a] [-g] [-v level] <files>
 ```
 
-### Description 
+Detailed examples and use cases are available in the [Usage Guide](#usage-guide).
 
-The `c3ms` tool calculates Halstead's programming effort and various complexity metrics based on the number of tokens in the provided files. Each file is considered an independent module, and metrics are calculated for each file individually as well as aggregated across all files.
+## Description
 
-#### Criteria for Tokens
+`c3ms` independently calculates metrics for each file and aggregates them across all files, offering a comprehensive analysis of programming effort and complexity.
 
-- **Operands**: Constants, types (int, float, etc.), identifiers, C specifiers and API (high level) keywords like oneTBB, SYCL, etc.
-- **Operators**: Language keywords, API (low level) keywords and custom keywords from developer and operators.
+### Criteria for Tokens
 
-Additionally, the tool outputs Halstead's volume and counts the number of conditional statements, including `case`, `default`, `for`, `if`, and `while`.
+- **Operands**: Constants, types, identifiers, and C specifiers.
+- **Operators**: Language and API keywords, custom developer keywords.
 
-### Options
+Includes Halstead's volume, conditional statement counts, and more.
 
-- `-h`, `--help`: Show this help message.
-- `-f`, `--function-metrics`: Analyze and report metrics for each function.
-- `-a`, `--file-metrics`: Analyze and report metrics for each file.
-- `-g`, `--global-metrics`: Analyze and report global metrics across all files.
-- `-v [level]`, `--verbosity [level]`: Adjusts the output detail level.
-  - **Level 1:** Basic metrics _(Effort, Volume, Conditions, Cyclomatic Complexity, Difficulty, Time Required, Bugs, Maintainability)_
-  - **Level 2:** Basic metrics and Additional Statistics _(Types, Constants, Identifiers, Cspecs, Keywords, Operators)_
-  - **Level 3:** All the above metrics plus Detailed Metrics _(n1 - unique operators, n2 - unique operands, N1 - total operators, N2 - total operands)_
+## Options
 
-### Updates
+Comprehensive command options with different levels of verbosity are available, catering to various analysis needs.
 
-#### 2023
+- `h`, `--help`:
+  - **Function:** Displays a comprehensive help message.
 
-##### Contributions by Cristian Campos Ferrer (University of Málaga)
+- `f`, `--function-metrics`:
+  - **Function:** Initiates an in-depth analysis and generates a report detailing metrics for each individual function within the source files.
+  - **Use Case:** Use this when you need a granular view of each function's complexity and performance metrics.
 
-In 2023, updates and improvements have been made to the library. Key improvements include:
+- `a`, `--file-metrics`:
+  - **Function:** Focuses the analysis at the file level, providing a metrics report for each file.
+  - **Use Case:** Beneficial when evaluating the overall quality or complexity of each file independently.
 
-- A complete restructuring of the project, introducing a new directory structure (`src`, `test`, `docs`, etc.) and an updated CMakeLists files that supports both `RELEASE` and `DEBUG` versions.
-- Expansion of the lexicon to incorporate modern programming concepts and technologies such as `C++`, `SYCL`, `oneTBB`, `AVX2`, `SIMD`, etc.
-- Enhanced the tool's capability to automatically process functions developed by the programmer, which are not derived from any API. This significantly improves the detection and analysis of operators within the code.
-- Refinement of the `CodeStatistics` component, the implementation of which has been moved to `codestatistics.hh` and `codestatistics.cc`.
-- Introduction of new metrics such as `cyclomatic complexity`, `maintainability index`, `time required` and `bugs delivered`.
-- Improved parsing capabilities, allowing files to be broken down into functions using flags such as `--function-metrics`(-f), `--file-metrics`(-a) and `--global-metrics`(-g).
-- Improved presentation of results with colour-coded output and tabular formats.
-- Development of new `CodeUtils` and `CodeMetrics` files for centralized metric calculations and utility functions.
-- Redistribution of functions from `main.cpp` into these new support files.
-- General refactoring of the original code by Basilio B. Fraguela (2009-2010) to take advantage of new C++ features and add additional functions.
-- The project structure has been generated using the [template](https://github.com/remusao/Bison-Flex-CPP-template) created by remusao, which incorporates the latest versions of Flex and Bison in C++. This approach ensures modern, efficient parsing and lexing capabilities within the project.
+- `g`, `--global-metrics`:
+  - **Function:** Aggregates and reports metrics across all specified files, offering a holistic view of the entire codebase.
+  - **Use Case:** Ideal for getting an overall sense of the project's complexity and maintainability.
 
-These updates are intended to significantly increase the performance, usability and analytical capabilities of the library.
+- `-v [level]`, `--verbosity [level]`:
+  - **Function:** Controls the depth of information included in the output.
+  - **Levels:**
+    - **Level 1:** Basic metrics, providing an overview of essential aspects like Effort, Volume, Conditions, Cyclomatic Complexity, Difficulty, Time Required, Bugs, and Maintainability.
+    - **Level 2:** Includes everything in Level 1, plus additional statistical data such as Types, Constants, Identifiers, C Specifiers, Keywords, and Operators.
+    - **Level 3:** Encompasses all metrics from Levels 1 and 2, supplemented with Detailed Metrics for a comprehensive analysis. This includes unique operators (n1), unique operands (n2), total operators (N1), and total operands (N2).
+  - **Use Case:** Adjust the verbosity level based on your reporting needs – whether you require a high-level summary (Level 1), more detailed insights (Level 2), or an exhaustive analysis (Level 3).
 
----
+These command options empower users to fine-tune the analysis process, ensuring that c3ms delivers precisely the insights needed, whether for a quick overview or a detailed examination of your code's complexity and maintainability.
 
-Copyright (c) 2009, 2010 Basilio B. Fraguela. University of A Coruña
+## Usage Guide
+
+### Basic Usage
+
+```shell
+./C3MS -a <files>
+```
+
+<img src="images/basic_usage.png" alt="Basic Usage" width="650"/>
+
+### Verbose Mode
+
+```shell
+./C3MS -a -v 3 <files>
+```
+
+<img src="images/verbose_mode.png" alt="Verbose Mode" width="650"/>
+
+### Debug mode (for developers)
+
+In this mode, the tool will display the tokens found in the file, along with their corresponding type. To analyze a single file in debug mode:
+
+```shell
+./configure --with-debug
+make
+./C3MS -a <files>
+```
+
+<img src="images/debug_mode.png" alt="Debug Mode" width="650"/>
+
+## Updates and Contributions
+
+### By C. Campos-Ferrer (University of Málaga)
+
+- Extensive project restructuring and lexicon expansion.
+- Enhanced parsing capabilities and introduction of new metrics.
+- Overall improvement in performance and usability.
+
+Full details of the 2023 updates can be found [here](#).
+
+## FAQs/Troubleshooting
+
+For common questions and troubleshooting advice, visit our [FAQs section](#faqstroubleshooting).
+
+## License
+
+This project is licensed under GPL-2.0 license. See the [LICENSE file](LICENSE) for details.
+
+## Acknowledgments
+
+- Special thanks to all contributors and to **Basilio B. Fraguela** for the original code (2009-2010).
+
+- This project utilizes the [template](https://github.com/remusao/Bison-Flex-CPP-template) by ***remusao***.
