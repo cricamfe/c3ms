@@ -1,7 +1,7 @@
 
-# c3ms: Halstead's Effort and Complexity Metrics Calculator
+# C3MS: Halstead's Effort and Complexity Metrics Calculator
 
-**c3ms** is a comprehensive tool for calculating Halstead's programming effort and various complexity metrics. It analyzes the token composition in code files, providing valuable insights into your software's complexity and maintainability.
+**C3MS** is a comprehensive tool for calculating Halstead's programming effort and various complexity metrics. It analyzes the token composition in code files, providing valuable insights into your software's complexity and maintainability.
 
 ## Table of Contents
 
@@ -19,9 +19,11 @@
 
 ## Acknowledgments
 
-- Special thanks to all contributors and to **Basilio B. Fraguela** for the original code (2009-2010).
+Special thanks to all contributors for their dedication and invaluable input. This project is profoundly inspired by **Basilio B. Fraguela's** original C3MS code (2009-2010) [1]. In honor of his work, we have kept the name in recognition, yet our version is completely renewed, adapted to the latest **C++ standards** and modern APIs like **oneTBB**, **SYCL**, or **SIMD**.
 
-- This project utilizes the [template](https://github.com/remusao/Bison-Flex-CPP-template) by ***remusao***.
+Thanks also to the [template](https://github.com/remusao/Bison-Flex-CPP-template) created by the user ***remusao*** to work with Flex and Bison projects with C++ code.
+
+[1]. *"A Generic Algorithm Template for Divide-and-Conquer in Multicore Systems" presented at the 12th IEEE Intl Conf on High Performance Computing and Communications (HPCC 2010), pp. 79-88, 2010*
 
 ## Installation
 
@@ -57,7 +59,7 @@ Detailed examples and use cases are available in the [Usage Guide](#usage-guide)
 
 ## Description
 
-`c3ms` independently calculates metrics for each file and aggregates them across all files, offering a comprehensive analysis of programming effort and complexity.
+`C3MS` independently calculates metrics for each file and aggregates them across all files, offering a comprehensive analysis of programming effort and complexity.
 
 ### Criteria for Tokens
 
@@ -93,7 +95,7 @@ Comprehensive command options with different levels of verbosity are available, 
     - **Level 3:** Encompasses all metrics from Levels 1 and 2, supplemented with Detailed Metrics for a comprehensive analysis. This includes unique operators (n1), unique operands (n2), total operators (N1), and total operands (N2).
   - **Use Case:** Adjust the verbosity level based on your reporting needs – whether you require a high-level summary (Level 1), more detailed insights (Level 2), or an exhaustive analysis (Level 3).
 
-These command options empower users to fine-tune the analysis process, ensuring that c3ms delivers precisely the insights needed, whether for a quick overview or a detailed examination of your code's complexity and maintainability.
+These command options empower users to fine-tune the analysis process, ensuring that C3MS delivers precisely the insights needed, whether for a quick overview or a detailed examination of your code's complexity and maintainability.
 
 ## Usage Guide
 
