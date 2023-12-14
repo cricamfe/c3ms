@@ -77,18 +77,18 @@ namespace c3ms
     }
 
     CodeStatistics::StatSize CodeStatistics::getUniqueOperands() const  {
-        return getCSSetSize(StatsCategory::CONSTANT) + getCSSetSize(StatsCategory::IDENTIFIER) + getCSSetSize(StatsCategory::CSPECIFIER) + getCSSetSize(StatsCategory::TYPE) + getCSSetSize(StatsCategory::APIKEYWORD);
+        return getCSSetSize(StatsCategory::CONSTANT) + getCSSetSize(StatsCategory::IDENTIFIER) + getCSSetSize(StatsCategory::CSPECIFIER) + getCSSetSize(StatsCategory::TYPE);
     }
     CodeStatistics::StatSize CodeStatistics::getUniqueOperators() const {
-        return getCSSetSize(StatsCategory::KEYWORD) + getCSSetSize(StatsCategory::OPERATOR) + getCSSetSize(StatsCategory::APILLKEYWORD) + getCSSetSize(StatsCategory::CUSTOMKEYWORD);
+        return getCSSetSize(StatsCategory::KEYWORD) + getCSSetSize(StatsCategory::OPERATOR) + getCSSetSize(StatsCategory::APIKEYWORD) + getCSSetSize(StatsCategory::APILLKEYWORD) + getCSSetSize(StatsCategory::CUSTOMKEYWORD);
     }
 
     CodeStatistics::StatSize CodeStatistics::getOperands() const {
-        return getCounterValue(StatsCategory::CONSTANT) + getCounterValue(StatsCategory::IDENTIFIER) + getCounterValue(StatsCategory::CSPECIFIER) + getCounterValue(StatsCategory::TYPE) + getCounterValue(StatsCategory::APIKEYWORD);
+        return getCounterValue(StatsCategory::CONSTANT) + getCounterValue(StatsCategory::IDENTIFIER) + getCounterValue(StatsCategory::CSPECIFIER) + getCounterValue(StatsCategory::TYPE);
     }
 
     CodeStatistics::StatSize CodeStatistics::getOperators() const {
-        return getCounterValue(StatsCategory::KEYWORD) + getCounterValue(StatsCategory::OPERATOR) + getCounterValue(StatsCategory::APILLKEYWORD) + getCounterValue(StatsCategory::CUSTOMKEYWORD);
+        return getCounterValue(StatsCategory::KEYWORD) + getCounterValue(StatsCategory::OPERATOR) + getCounterValue(StatsCategory::APIKEYWORD) + getCounterValue(StatsCategory::APILLKEYWORD) + getCounterValue(StatsCategory::CUSTOMKEYWORD);
     }
 
     void CodeStatistics::decOperator() { nOperators_--; }
@@ -153,6 +153,7 @@ namespace c3ms
         // Combining all operator sets into a single table
         printMetrics(result, keywordsSet_, nameWidth, valueWidth);
         printMetrics(result, operatorsSet_, nameWidth, valueWidth);
+        printMetrics(result, apiKeywordsSet_, nameWidth, valueWidth);
         printMetrics(result, apiLLKeywordsSet_, nameWidth, valueWidth);
         printMetrics(result, customKeywordsSet_, nameWidth, valueWidth);
 
@@ -171,7 +172,6 @@ namespace c3ms
         printMetrics(result, identifiersSet_, nameWidth, valueWidth);
         printMetrics(result, cSpecifiersSet_, nameWidth, valueWidth);
         printMetrics(result, typesSet_, nameWidth, valueWidth);
-        printMetrics(result, apiKeywordsSet_, nameWidth, valueWidth);
 
         return result.str();
     }
