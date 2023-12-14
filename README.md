@@ -5,6 +5,7 @@
 
 ## Table of Contents
 
+- [Acknowledgments](#acknowledgments)
 - [Installation](#installation)
   - [Debug/Development Mode](#debugdevelopment-mode)
   - [Release Mode](#release-mode)
@@ -15,7 +16,12 @@
 - [Updates and Contributions](#updates-and-contributions)
 - [FAQs/Troubleshooting](#faqstroubleshooting)
 - [License](#license)
-- [Acknowledgments](#acknowledgments)
+
+## Acknowledgments
+
+- Special thanks to all contributors and to **Basilio B. Fraguela** for the original code (2009-2010).
+
+- This project utilizes the [template](https://github.com/remusao/Bison-Flex-CPP-template) by ***remusao***.
 
 ## Installation
 
@@ -136,9 +142,3 @@ For common questions and troubleshooting advice, visit our [FAQs section](#faqst
 ## License
 
 This project is licensed under GPL-2.0 license. See the [LICENSE file](LICENSE) for details.
-
-## Acknowledgments
-
-- Special thanks to all contributors and to **Basilio B. Fraguela** for the original code (2009-2010).
-
-- This project utilizes the [template](https://github.com/remusao/Bison-Flex-CPP-template) by ***remusao***.
