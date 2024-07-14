@@ -27,7 +27,14 @@ Thanks also to the [template](https://github.com/remusao/Bison-Flex-CPP-template
 
 ## Installation
 
-**Prerequisites**: Ensure that your system meets the required dependencies before installation. 
+**Prerequisites**: Ensure that your system meets the required dependencies before installation.
+
+#### Install Bison and Flex:
+##### Ubuntu
+```shell
+sudo apt-get update
+sudo apt-get install bison flex
+```
 
 ### Debug/Development Mode
 
